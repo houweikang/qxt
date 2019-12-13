@@ -40,30 +40,54 @@ def hour_report(dq):
       current_time = int(define_dts[2]) - 1
 
 
-      select_sql='''(SELECT a.`所属学院`,a.`地区`,a.`战队`,a.`小组`,a.`组长` 
-            ,sum(case b.`日期` when '%s' then b.`所有推广量` else 0 end) as '上日' 
+      # select_sql='''(SELECT a.`所属学院`,a.`地区`,a.`战队`,a.`小组`,a.`组长`
+      #       ,sum(case b.`日期` when '%s' then b.`所有推广量` else 0 end) as '上日'
+      #       ,sum(case b.`日期` when '%s' then b.`所有推广量` else 0  end) as '今日'
+      #       ,(sum(case b.`日期` when '%s' then b.`所有推广量` else 0  end)-sum(case b.`日期` when '%s' then b.`所有推广量` else 0 end)) as '差值'
+      #       FROM temp_group as a left join tg_hours as b
+      #       on a.`所属学院`=b.`推广专员-所属学院` and a.`地区`=b.`推广专员-所属地区` and a.`战队`=b.`推广专员-所属战队` and a.`小组`=b.`推广专员-所属小组`
+      #       where a.`地区`='%s'
+      #       and b.`时刻` between 0 and %d
+      #       and b.`日期` between '%s' and '%s'
+      #       group by a.`所属学院`,a.`地区`,a.`战队`,a.`小组`,a.`组长`
+      #       union all
+      #       SELECT c.`所属学院`,c.`地区`,c.`战队`,concat('汇总-' ,c.`战队`) as '小组',c.`战队长` as 组长
+      #       ,sum(case d.`日期` when '%s' then d.`所有推广量` else 0 end) as '上日'
+      #       ,sum(case d.`日期` when '%s' then d.`所有推广量` else 0  end) as '今日'
+      #       ,(sum(case d.`日期` when '%s' then d.`所有推广量` else 0  end)-sum(case d.`日期` when '%s' then d.`所有推广量` else 0 end)) as '差值'
+      #       FROM temp_team as c
+      #       left join tg_hours as d
+      #       on c.`所属学院`=d.`推广专员-所属学院` and c.`地区`=d.`推广专员-所属地区` and c.`战队`=d.`推广专员-所属战队`
+      #       where c.`地区`='%s' and d.`时刻` between 0 and %d
+      #       and d.日期 between '%s' and '%s'
+      #       group by c.`所属学院`,c.`地区`,c.`战队`,c.`战队长`)
+      #       order by `所属学院`,`地区`,`战队`,`小组`''' \
+      #       % (last_dt, current_dt, current_dt, last_dt, dq, current_time, last_dt, current_dt,
+      #          last_dt, current_dt, current_dt, last_dt, dq, current_time, last_dt, current_dt)
+      select_sql='''select `所属学院`,`地区`,`战队`,`小组`,`组长`,'%s','今日',('今日'-'%s') as '差值' from
+            (SELECT a.`所属学院`,a.`地区`,a.`战队`,a.`小组`,a.`组长` 
+            ,sum(case b.`日期` when '%s' then b.`所有推广量` else 0 end) as '%s'
             ,sum(case b.`日期` when '%s' then b.`所有推广量` else 0  end) as '今日' 
-            ,(sum(case b.`日期` when '%s' then b.`所有推广量` else 0  end)-sum(case b.`日期` when '%s' then b.`所有推广量` else 0 end)) as '差值' 
             FROM temp_group as a left join tg_hours as b 
-            on a.`所属学院`=b.`推广专员-所属学院` and a.`地区`=b.`推广专员-所属地区` and a.`战队`=b.`推广专员-所属战队` and a.`小组`=b.`推广专员-所属小组` 
+            on a.`所属学院`=b.`推广专员-所属学院` and a.`地区`=b.`推广专员-所属地区` 
+            and a.`战队`=b.`推广专员-所属战队` and a.`小组`=b.`推广专员-所属小组` 
             where a.`地区`='%s' 
             and b.`时刻` between 0 and %d 
-            and b.`日期` between '%s' and '%s'  
+            and b.`日期` = '%s' 
             group by a.`所属学院`,a.`地区`,a.`战队`,a.`小组`,a.`组长` 
-            union 
+            union all 
             SELECT c.`所属学院`,c.`地区`,c.`战队`,concat('汇总-' ,c.`战队`) as '小组',c.`战队长` as 组长 
-            ,sum(case d.`日期` when '%s' then d.`所有推广量` else 0 end) as '上日' 
+            ,sum(case d.`日期` when '%s' then d.`所有推广量` else 0 end) as '%s' 
             ,sum(case d.`日期` when '%s' then d.`所有推广量` else 0  end) as '今日' 
-            ,(sum(case d.`日期` when '%s' then d.`所有推广量` else 0  end)-sum(case d.`日期` when '%s' then d.`所有推广量` else 0 end)) as '差值' 
             FROM temp_team as c 
             left join tg_hours as d 
             on c.`所属学院`=d.`推广专员-所属学院` and c.`地区`=d.`推广专员-所属地区` and c.`战队`=d.`推广专员-所属战队` 
             where c.`地区`='%s' and d.`时刻` between 0 and %d 
-            and d.日期 between '%s' and '%s' 
+            and d.日期 = '%s' 
             group by c.`所属学院`,c.`地区`,c.`战队`,c.`战队长`) 
             order by `所属学院`,`地区`,`战队`,`小组`''' \
-            % (last_dt, current_dt, current_dt, last_dt, dq, current_time, last_dt, current_dt,
-               last_dt, current_dt, current_dt, last_dt, dq, current_time, last_dt, current_dt)
+            % (last_dt,last_dt,last_dt,last_dt, current_dt, dq, current_time, last_dt,last_dt,last_dt, current_dt, dq, current_time, last_dt,)
+
       datas = db.select(select_sql)[0]
       cols = db.select(select_sql)[1]
       db.commit()

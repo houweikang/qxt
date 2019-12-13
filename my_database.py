@@ -26,6 +26,7 @@ class Database():
             # if result == 1:
             #     print('操作成功!')
         except:
+            # db.rollback()
             print('有问题')
 
     def commit(self):
