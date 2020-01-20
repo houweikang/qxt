@@ -46,6 +46,9 @@ class DbQxt(Database):
         password = 'houweikang123'
         Database.__init__(self,host, port, database, charset, user, password)
 
+    def hourreport(self,dt):
+        sql=''
+
 
 def main():
     db=DbQxt()

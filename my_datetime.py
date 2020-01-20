@@ -2,9 +2,7 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse
 
 
-
 class MyDateTime:
-
     default_dt = datetime.strftime(datetime.now(), '%Y-%m-%d %H:00:00')
     def __init__(self, input_datetime=default_dt):
         self.str_inputdt = input_datetime
@@ -22,7 +20,6 @@ class MyDateTime:
         try:
             parse(self.str_inputdt)
             return True
-
         except ValueError:
             return False
 
@@ -50,6 +47,11 @@ class MyDateTime:
     def str_date(self):
         return self.dt_date.strftime('%Y/%m/%d')
 
+    @property
+    def str_date_monthday(self):
+        return self.dt_date.strftime('%m月%d日')
+
+
     def dt_pastday(self, days=1):
         return self.dt_inputdt - timedelta(days=days)
 
@@ -74,12 +76,14 @@ class MyDateTime:
 
 
 def main():
-    if not MyDateTime().dt_date.weekday():
-        dts = '%s-%s-%s' % (MyDateTime().str_pastday(2), MyDateTime().str_date, MyDateTime().str_hour)
-    else:
-        dts = '%s-%s-%s' % (MyDateTime().str_pastday(1), MyDateTime().str_date, MyDateTime().str_hour)
+    # if not MyDateTime().dt_date.weekday():
+    #     dts = '%s-%s-%s' % (MyDateTime().str_pastday(2), MyDateTime().str_date, MyDateTime().str_hour)
+    # else:
+    #     dts = '%s-%s-%s' % (MyDateTime().str_pastday(1), MyDateTime().str_date, MyDateTime().str_hour)
 
-    print(dts)
+    # print(dts)
+    print(MyDateTime('2020/1/1').is_date)
+
 
 if __name__ == '__main__':
     main()
