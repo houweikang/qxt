@@ -2,7 +2,6 @@ import pymysql
 
 class Database():
     """新建数据库类"""
-
     def __init__(self, host, port, database, charset, user, password):
         """连接数据库"""
         self.con = pymysql.connect(host=host, port=port,
