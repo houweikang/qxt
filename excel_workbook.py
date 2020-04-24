@@ -24,7 +24,7 @@ def WorkBooks_Add(name,path):
         name=name + MyType
     full_name=os.path.join(path, name)
     wb.SaveAs(full_name)
-    wb.Save
+    wb.Save()
     return wb
 
 def main():
