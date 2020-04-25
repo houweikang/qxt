@@ -52,28 +52,19 @@ class ExcelChart:
     def title(self, name):
         self.chart_chart.HasTitle = True
         self.chart_chart.ChartTitle.Text = name
-        font = self.chart_chart.ChartTitle.Font
-        font.Name = ''
+        return self.chart_chart.ChartTitle
 
-    def lable(self, position=None):
-        '''
-        :param position: msoElementLegendTop ,msoElementLegendCenter
-                        msoElementLegendBottom,msoElementLegendLeft,msoElementLegendRight
+    def lable(self):
+        self.chart_chart.HasDataLabel = True
+        self.chart_chart.DataLabel.Text = "Saturday"
 
-                        msoElementLegendNone
-        :return:
-        '''
-        if not position:
-            position=c.msoElementDataLabelTop
-        self.chart_chart.ApplyDataLabels(ShowValue=True)
-        self.chart_chart.SetElement(position)
+    def legend(self):
+        self.chart_chart.HasLegend = True
+        return self.chart_chart.Legend
 
-    # def data_table(self, arg=c.msoElementDataTableWithLegendKeys):
-    #     '''
-    #     :param arg: msoElementDataTableNone
-    #     :return:
-    #     '''
-    #     self.chart_chart.SetElement(arg)
+    def data_table(self):
+        self.chart_chart.HasDataTable = True
+        return self.chart_chart.DataTable
 
     def other_type(self, num, type=c.xlLine):
         self.chart_chart.FullSeriesCollection(num).ChartType = type
@@ -86,23 +77,49 @@ class ExcelChart:
         self.chart_chart.Legend.Font.Name = font_name
         self.chart_chart.Datatable.Font.Name = font_name
 
-    def no_gridline(self):
-        self.chart_chart.SetElement(c.msoElementPrimaryValueGridLinesNone)
+
 
     def select(self):
         self.chart.Select()
 
+    def no_gridline(self):
+        self.chart_chart.Axes(c.xlValue).HasMajorGridlines = False
+
+
+def postion(obj, arg):
+    obj.Position = arg
+
+
+def font_style(font, name=None, size=None, bold=None):
+    if name:
+        font.Name = name
+    if size:
+        font.Size = size
+    if bold:
+        font.Bold = bold
+
 
 def main():
     chart = ExcelChart('a', (0, 170, 1200, 500), c.xlLine)
-    # chart.type(c.xlLine)
-    chart.data(rng=chart.sheet.Range("a3:Af5"), ChartPlotBy=c.xlRows)
+    chart.data(rng=chart.sheet.Range("a3:af7"), ChartPlotBy=c.xlRows)
+
     # chart.no_gridline()
-    # chart.font()
-    # chart.data_table()
-    chart.title('haha')
-    # chart.lable()
+
+    dt = chart.data_table()
+    dt_font = dt.Font
+    font_style(dt_font, 'Microsoft YaHei UI', 12, True)
+
+    title = chart.title('haha')
+    title_font = title.Font
+    font_style(title_font, 'Microsoft YaHei UI', 20, True)
+
+    legend = chart.legend()
+    legend_font = legend.Font
+    font_style(legend_font, 'Microsoft YaHei UI', 20, True)
+    postion(legend, c.xlLegendPositionTop)
+
     chart.select()
+
 
 
 if __name__ == "__main__":
