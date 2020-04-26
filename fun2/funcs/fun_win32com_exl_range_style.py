@@ -3,9 +3,10 @@ from win32com.client import constants as c  # 旨在直接使用VBA常数
 import os
 
 excel = win32com.client.gencache.EnsureDispatch("Excel.Application")
-excel.Visible = 1
 excel.DisplayAlerts = 0
-excel.ScreenUpdating = 1
+
+
+
 
 
 class RangeStyle:
@@ -199,25 +200,3 @@ class RangeStyle:
     #     self.merge(data_rg,[1,2,3])
     #     self.xl3Triangles(data_rg, 8)
     #     self.xlConditionValueNumber(data_rg, 9)
-
-def component_style(sht=None):
-    # 无网格线
-    rngstyle = RangeStyle(sht)
-    rngstyle.none_gridlines()
-    # 赋值
-    rg = rngstyle.range
-    cols_rg = rg.Rows(3)
-    rc = rg.Rows.Count
-    cc = rg.Columns.Count
-    data_rg = rngstyle.sheet.Range(rg.Cells(4, 1), rg.Cells(rc, cc))
-    # 设置格式
-    rngstyle.alignment()  # 居中对齐
-    rngstyle.fontname()  # 雅黑字体
-    rngstyle.title_style()
-    rngstyle.subtitle_style()
-    rngstyle.cols_style(cols_rg, False)
-    rngstyle.data_style(data_rg, False)
-
-
-if __name__ == '__main__':
-    component_style()

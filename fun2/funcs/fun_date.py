@@ -15,13 +15,14 @@ def get_date_date(date):
     date_date = parse(date)
     return date_date
 
-def get_str_date(date,format = '%Y/%m/%d'):
+def get_str_date(input_date=(datetime.date.today()+datetime.timedelta(-1)),format = '%Y/%m/%d'):
     '''
     :param date: 字符串类型日期
     :return: 字符串类型日期 '2020/05/06'
     '''
-    date_date = get_date_date(date)
-    str_date = date_date.strftime(format)
+    if isinstance(input_date,str):
+        input_date = get_date_date(input_date)
+    str_date = input_date.strftime(format)
     return str_date
 
 def get_str_lastNmonth_firstday(date,n=0):
@@ -31,7 +32,7 @@ def get_str_lastNmonth_firstday(date,n=0):
     '''
     date_date = get_date_date(date)
     days = date_date.day
-    date_currentmonth_firstday = date_date + datetime.timedelta()
+    date_currentmonth_firstday = date_date + datetime.timedelta(1-days)
     date_lastNmonth_firstday = date_currentmonth_firstday + relativedelta(months=n)
     str_currentmonth_firstday = date_lastNmonth_firstday.strftime('%Y/%m/%d')
     return str_currentmonth_firstday

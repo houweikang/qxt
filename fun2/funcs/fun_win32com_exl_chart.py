@@ -77,13 +77,41 @@ class ExcelChart:
         self.chart_chart.Legend.Font.Name = font_name
         self.chart_chart.Datatable.Font.Name = font_name
 
+    def ticklabel(self):
+        return self.chart_chart.Axes(c.xlValue).TickLabels
 
+    def chartstyle(self, style_num=233):
+        # Y轴文字
+        # self.chart.ChartStyle = style_num
+        self.chart_chart.ChartStyle = style_num
 
     def select(self):
         self.chart.Select()
 
     def no_gridline(self):
         self.chart_chart.Axes(c.xlValue).HasMajorGridlines = False
+
+    def series_count(self):
+        # return self.chart_chart.FullSeriesCollection.Count
+        return len(self.chart_chart.FullSeriesCollection())
+
+    def series_style(self, s_num, smooth=False, line_color=None):
+        self.series = self.chart_chart.FullSeriesCollection(s_num)
+        self.series.Smooth = smooth
+
+        # RGB(255, 255, 0) 黄
+        # RGB(0, 112, 192) 蓝
+        # RGB(0, 176, 80) 绿
+        # RGB(255, 0, 0) 红
+        # RGB(255, 255, 255) 白
+
+        if line_color:  # RGB
+            self.series.Format.Line.ForeColor.RGB = rgbToInt(line_color)
+
+
+def rgbToInt(rgb):
+    colorInt = rgb[0] + (rgb[1] * 256) + (rgb[2] * 256 * 256)
+    return colorInt
 
 
 def postion(obj, arg):
@@ -98,29 +126,4 @@ def font_style(font, name=None, size=None, bold=None):
     if bold:
         font.Bold = bold
 
-
-def main():
-    chart = ExcelChart('a', (0, 170, 1200, 500), c.xlLine)
-    chart.data(rng=chart.sheet.Range("a3:af7"), ChartPlotBy=c.xlRows)
-
-    # chart.no_gridline()
-
-    dt = chart.data_table()
-    dt_font = dt.Font
-    font_style(dt_font, 'Microsoft YaHei UI', 12, True)
-
-    title = chart.title('haha')
-    title_font = title.Font
-    font_style(title_font, 'Microsoft YaHei UI', 20, True)
-
-    legend = chart.legend()
-    legend_font = legend.Font
-    font_style(legend_font, 'Microsoft YaHei UI', 20, True)
-    postion(legend, c.xlLegendPositionTop)
-
-    chart.select()
-
-
-
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
