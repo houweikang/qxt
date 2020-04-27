@@ -7,8 +7,6 @@ excel.DisplayAlerts = 0
 
 
 
-
-
 class RangeStyle:
     '''
     Excel区域格式

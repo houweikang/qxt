@@ -3,19 +3,14 @@
 # @Time    : 2020/4/26 10:37:21
 # @Author  : HouWk
 # @Site    : 
-# @File    : us_win32com_exl_chart.py
+# @File    : use_win32com_exl_chart.py
 # @Software: PyCharm
+from config import component_RGB
 from fun_win32com_exl_chart import ExcelChart, font_style, postion
 from win32com.client import constants as c  # 旨在直接使用VBA常数
 
-RGBs = [(255, 255, 0), (0, 112, 192), (0, 176, 80), (255, 0, 0), (255, 255, 255)]
 
-
-# 黄 蓝 绿 红 白
-
-def chart_component(data_rng,chart_title,chart_name):
-    component_RGB = RGBs[:4]
-
+def chart_component(data_rng, chart_title, chart_name):
     chart = ExcelChart(chart_name, (0, 170, 1200, 500), c.xlLine)
     chart.data(data_rng, ChartPlotBy=c.xlRows)
 
@@ -47,7 +42,3 @@ def chart_component(data_rng,chart_title,chart_name):
         n += 1
 
     chart.select()
-
-
-# if __name__ == '__main__':
-#     chart_component('a')

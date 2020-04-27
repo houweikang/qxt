@@ -3,7 +3,7 @@
 # @Time    : 2020/4/20 15:24:33
 # @Author  : HouWk
 # @Site    : 
-# @File    : fun_component.py
+# @File    : data_component.py
 # @Software: PyCharm
 from db_QXT import operate_db
 import pandas as pd
@@ -50,7 +50,7 @@ def component_data(start_date, final_date, dq):
     col_names[0] = '月'
     result.columns = col_names  # 行名
 
-    return list(result.values),col_names
+    return result
 
 
 if __name__ == '__main__':
