@@ -5,9 +5,17 @@
 # @Site    : 
 # @File    : use_os.py
 # @Software: PyCharm
-from fun_os import create_folder
+import os
 from datetime import datetime
 import dateutil.parser
+
+
+def create_folder(path):
+    path = path.strip()
+    path = path.rstrip('\\')
+    if not os.path.exists(path):
+        os.makedirs(path)
+    return path
 
 
 # 创建目标文件夹

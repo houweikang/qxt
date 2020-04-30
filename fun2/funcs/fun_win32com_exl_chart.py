@@ -109,6 +109,7 @@ class ExcelChart:
             self.series.Format.Line.ForeColor.RGB = rgbToInt(line_color)
 
 
+
 def rgbToInt(rgb):
     colorInt = rgb[0] + (rgb[1] * 256) + (rgb[2] * 256 * 256)
     return colorInt

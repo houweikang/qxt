@@ -42,9 +42,10 @@ class MakeReportOrChart:
         rngstyle.subtitle_style()
         rngstyle.cols_style(cols_rg, False)
         rngstyle.data_style(data_rg, False)
+        rg.Select()
 
     def chart(self, chart_title, chart_style, chart_rng_list=None, chart_name=None):
-        # chart_rng_list=[[],[]]
+        # chart_rng_list=[[1,1],[4,4]]
         # 调整chart
         try:
             if chart_rng_list:

@@ -27,10 +27,11 @@ def conn_db():
 def operate_db(sql):
     conn = conn_db()
     sql_start = sql[:10].strip().lower()
-    if sql_start.startswith('select'):
+    try:
+    # if sql_start.startswith('select'):
         sql_data = pd.read_sql(sql, conn)
         return DataFrame(sql_data)
-    else:
+    except:
         cursor = conn.cursor()
         cursor.execute(sql)
         conn.commit()

@@ -5,16 +5,13 @@
 # @Site    : 
 # @File    : data_component.py
 # @Software: PyCharm
-from db_QXT import operate_db
 import pandas as pd
+from get_data_from_db import get_component_data
 
 
 def component_data(start_date, final_date, dq):
-    sql = '''SELECT cast([提交时间] as date) 日期,[课程顾问-员工号] 工号
-        FROM [QXT].[dbo].[Tg] 
-        where cast([提交时间] as date) between '{}' and '{}' and [课程顾问-所属地区] = '{}'
-        '''.format(start_date, final_date, dq)
-    data = operate_db(sql)
+    #获取数据
+    data = get_component_data(start_date, final_date, dq)
 
     # 获取每日顾问人数
     unique_consultant = data.drop_duplicates()

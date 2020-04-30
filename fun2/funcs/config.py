@@ -6,9 +6,6 @@
 # @File    = config.py
 # @Software= PyCharm
 
-from pandas import DataFrame
-import numpy as np
-import pandas as pd
 
 # 保存根目录
 root_path = r"e:\python_Reports"
@@ -21,17 +18,31 @@ un = "sa"  # '数据库连接用户名
 pw = "houweikang123"  # '数据库连接密码
 
 # 目标
-dq_list = ['保定', '济南']
-component_dqs=['济南', '燕郊']
+day_reports_list = ['保定', '济南']
+component_dqs = ['济南', '燕郊']
 
-#近4月+平均线 颜色
-RGBs = [(255, 255, 0), (0, 112, 192), (0, 176, 80), (255, 0, 0), (255, 255, 255)] # 黄 蓝 绿 红 白
+# 近4月+平均线 颜色
+RGBs = [(255, 255, 0), (0, 112, 192), (0, 176, 80), (255, 0, 0), (255, 255, 255)]  # 黄 蓝 绿 红 白
 
-#分量线颜色
+# 分量线颜色
 component_RGB = RGBs[:4]
 
+holiday_cols = {'保定': 'bd',
+                '济南': 'jn'}
 
-#
+
+#替换战队
+dict_substituet = {
+    '1战队': '运营一部',
+    '2战队': '运营二部',
+    '3战队': '运营三部',
+    '4战队': '运营四部',
+    '5战队': '运营五部',
+    '6战队': '运营六部',
+    '7战队': '运营七部',
+    '8战队': '运营八部',
+}
+
 # def target():
 #     # 获取所有目标
 #     msxy_bd_1team = msxy_bd_1team_group_target()

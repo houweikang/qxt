@@ -3,37 +3,27 @@
 # @Time    : 2020/4/26 15:18:15
 # @Author  : HouWk
 # @Site    : 
-# @File    : fun_erm_and_groentry_rate.py
+# @File    : data_erollment_and_GroupEntry_rate.py
 # @Software: PyCharm
-from db_QXT import operate_db
-from use_substituet import dict_substituet
+from config import dict_substituet
+from get_data_from_db import get_er_and_ge_rate_data
 
 
 def er_and_ge_rate_data(dq):
-    sql = '''SELECT [量类型],[所属学院] as 学院 ,[所属部门] as 地区 ,[所属战队] as 部门,[所属分组] as 小组 
-            ,sum(cast([数据量] as int)) as 业绩 ,sum(cast([进群量] as int)) as 进群量 
-            ,sum(cast([注册量] as int)) as 注册量 
-            FROM [QXT].[dbo].[推广统计] 
-            where [所在岗位] like '推广专员%' and [所属部门] like '{}%' 
-            group by [量类型],[所属学院],[所属部门],[所属战队],[所属分组] 
-            having sum(cast([数据量] as int)) <> 0  and sum(cast([进群量] as int)) <> 0  
-            and sum(cast([注册量] as int)) <> 0'''.format(dq)
-    data = operate_db(sql)
+    # 获取推广统计数据
+    data = get_er_and_ge_rate_data(dq)
 
     # 替换地区 部门 推广一部-'' 1战队-推广一部
     data['地区'].replace(r'推广\w部', '', regex=True, inplace=True)
-    data['部门'].replace(dict_substituet, inplace=True)
+    data['运营部'].replace(dict_substituet, inplace=True)
 
-    deparment_list = ['量类型', '学院', '地区', '部门', '小组']
+    deparment_list = ['量类型', '学院', '地区', '运营部', '小组']
     group_data = df_operation(data, deparment_list)
     team_data = df_operation(data, deparment_list[:-1])
     region_data = df_operation(data, deparment_list[:-2])
     colege_data = df_operation(data, deparment_list[:-3])
 
     return group_data, team_data, region_data, colege_data
-    # col_names = list(data.columns)
-    # result_value = list(data.values)
-    # return result_value, col_names
 
 
 def data_format(df):
