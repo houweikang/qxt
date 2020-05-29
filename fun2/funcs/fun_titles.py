@@ -7,14 +7,15 @@
 # @Software: PyCharm
 from fun_date import get_str_date
 
+
 def subtitle(*args):
     n = len(args)
     if n == 1:
         final_date = args[0]
-        final_date = get_str_date(final_date,'%Y/%m/%d')
-        dates =  final_date
+        final_date = get_str_date(final_date, '%Y/%m/%d')
+        dates = final_date
         return dates
-    elif n ==2:
+    elif n == 2:
         start_date = args[0]
         start_date = get_str_date(start_date, '%Y/%m/%d')
         final_date = args[1]
@@ -25,13 +26,15 @@ def subtitle(*args):
         print('参数过多！')
         exit()
 
-def titles(title,*args):
-    t = [[title,'']]
+
+def titles(title, *args):
+    t = [[title, '']]
     subt = subtitle(*args)
-    subts = ['统计时间：',subt]
+    subts = ['统计时间：', subt]
     t.append(subts)
     return t
 
+
 if __name__ == '__main__':
-    print(titles('123','2020/1/1','2020/4/1'))
-    print(titles('123','2020/4/1'))
+    print(titles('123', '2020/1/1', '2020/4/1'))
+    print(titles('123', '2020/4/1'))

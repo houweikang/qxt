@@ -1,10 +1,5 @@
 import win32com.client
 from win32com.client import constants as c  # 旨在直接使用VBA常数
-import os
-
-excel = win32com.client.gencache.EnsureDispatch("Excel.Application")
-excel.DisplayAlerts = 0
-
 
 
 class RangeStyle:
@@ -14,18 +9,17 @@ class RangeStyle:
     次要格式：加粗  合并  两个条件格式
     '''
 
-    def __init__(self, sht=None, range=None):
-        if sht:
-            self.sheet = sht
-        else:
-            self.sheet = excel.ActiveSheet
+    def __init__(self, sht, range=None):
+        self.excel = win32com.client.gencache.EnsureDispatch("Excel.Application")
+        self.sheet = sht
+
         if range:
             self.range = range
         else:
             self.range = self.sheet.UsedRange
 
     def none_gridlines(self):
-        excel.ActiveWindow.DisplayGridlines = False
+        self.excel.ActiveWindow.DisplayGridlines = False
 
     def fontname(self, name='Microsoft YaHei UI'):  # 字体名称
         self.range.Font.Name = name
@@ -177,24 +171,3 @@ class RangeStyle:
             rng_col_fc1.BarColor.Color = 13012579
             rng_col_fc1.BarColor.TintAndShade = 0
 
-    # def hour_style(self):
-    #     #无网格线
-    #     self.none_gridlines()
-    #     # 赋值
-    #     rg = self.range
-    #     title_rg = rg.Rows(1)
-    #     datetime_rg = rg.Rows(2)
-    #     cols_rg = rg.Rows(3)
-    #     rc=rg.Rows.Count
-    #     cc=rg.Columns.Count
-    #     data_rg = self.sheet.Range(rg.Cells(4,1),rg.Cells(rc,cc))
-    #     # 设置格式
-    #     self.title_style(title_rg)
-    #     self.datetime_style(datetime_rg)
-    #     self.cols_style(cols_rg,False)
-    #     self.data_style(data_rg,False)
-    #     self.autofit(cols_rg,9)
-    #     self.bold(data_rg,'汇总',[1,2,3,4])
-    #     self.merge(data_rg,[1,2,3])
-    #     self.xl3Triangles(data_rg, 8)
-    #     self.xlConditionValueNumber(data_rg, 9)

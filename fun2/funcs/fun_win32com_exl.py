@@ -11,14 +11,6 @@ import os
 import numpy as np
 
 
-# excel = win32com.client.gencache.EnsureDispatch("Excel.Application")
-# excel.DisplayAlerts = 0
-# excel.SheetsInNewWorkbook = 1
-#
-#
-# def screen_updating(bol=True):
-#     excel.ScreenUpdating = bol
-#     excel.Visible = bol
 
 class Excel:
     def __init__(self):
