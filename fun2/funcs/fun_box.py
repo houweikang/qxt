@@ -3,7 +3,6 @@ from tkinter import filedialog
 
 
 class MyBox:
-
     def __init__(self):
         width, height = 400, 150
         self.root = tk.Tk()

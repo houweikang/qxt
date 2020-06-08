@@ -143,7 +143,7 @@ class Excel:
             rng_col_fc1_ic3.Operator = 5
             rng_col_fc1_ic3.Value = 0
 
-    def xlConditionValueNumber(self, rng, columnlist):
+    def xlCondition_percent_databar(self, rng, columnlist):
         col_inds = []
         if isinstance(columnlist, list):
             col_inds = columnlist
@@ -158,6 +158,24 @@ class Excel:
             rng_col_fc1.MaxPoint.Modify(newtype=c.xlConditionValueNumber, newvalue=1)
             rng_col_fc1.BarColor.Color = 13012579
             rng_col_fc1.BarColor.TintAndShade = 0
+
+    def xlCondition_maxmin_databar(self, rng, columnlist,color):
+        col_inds = []
+        if isinstance(columnlist, list):
+            col_inds = columnlist
+        elif isinstance(columnlist, int):
+            col_inds.append(columnlist)
+        for col_ind in col_inds:
+            rng_col = rng.Columns(col_ind)
+            rng_col.FormatConditions.AddDatabar()
+            rng_col.FormatConditions(rng_col.FormatConditions.Count).ShowValue = True
+            rng_col.FormatConditions(rng_col.FormatConditions.Count).SetFirstPriority()
+            rng_col_fc1=rng_col.FormatConditions(1)
+            rng_col_fc1.MinPoint.Modify(newtype=c.xlConditionValueAutomaticMin)
+            rng_col_fc1.MaxPoint.Modify(newtype=c.xlConditionValueAutomaticMax)
+            rng_col_fc1.BarColor.Color = color
+            rng_col_fc1.BarColor.TintAndShade = 0
+
 
     # 图
     def position(self, obj, pos):
@@ -404,7 +422,7 @@ class Excel:
                 raise AttributeError('Not Existed {}.{}'.format(sys._getframe().f_code.co_name,k))
 
     # 应用
-    def common_sheet(self, wb_obj, sht_name, tab_color, df, title_v=None,
+    def common_sheet(self, wb_obj, sht_name,  df,tab_color=None, title_v=None,
                      subtitles_v=None, shadow=False, gridlines=False):
         sheets_count = wb_obj.Worksheets.Count
         # 新增表
@@ -414,10 +432,11 @@ class Excel:
         if not gridlines:
             self.excel.ActiveWindow.DisplayGridlines = False
         # 表 标签颜色
-        sht_tab_colors = {'R': 7697919, 'DR': 255, 'G': 11854022, 'DG': 2315831}
-        if isinstance(tab_color, str):
-            sht_tab_colors = sht_tab_colors[tab_color]
-        sht_obj.Tab.Color = sht_tab_colors
+        if tab_color:
+            sht_tab_colors = {'R': 7697919, 'DR': 255, 'G': 11854022, 'DG': 2315831,'Y':65535}
+            if isinstance(tab_color, str):
+                sht_tab_colors = sht_tab_colors[tab_color]
+            sht_obj.Tab.Color = sht_tab_colors
         # df数据
         col_names = list(df.columns)
         result_value = list(df.values)
@@ -522,7 +541,7 @@ class Excel:
         data_rg.Cells.EntireRow.AutoFit()
         if shadow:
             if rs > 2:
-                for i in range(1, rs, 2):
+                for i in range(1, rs-2, 2):
                     data_rg.Rows(i).Interior.Color = 15921906
         rg.Select()
         return sht_obj, rs, cs

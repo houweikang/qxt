@@ -148,10 +148,10 @@ class RangeStyle:
             rng_col_fc1.IconSet = excel.ActiveWorkbook.IconSets(c.xl3Triangles)
             rng_col_fc1_ic2 = rng_col_fc1.IconCriteria(2)
             rng_col_fc1_ic3 = rng_col_fc1.IconCriteria(3)
-            rng_col_fc1_ic2.Type = c.xlConditionValueNumber
+            rng_col_fc1_ic2.Type = c.xlCondition_percent_databar
             rng_col_fc1_ic2.Operator = 7
             rng_col_fc1_ic2.Value = 0
-            rng_col_fc1_ic3.Type = c.xlConditionValueNumber
+            rng_col_fc1_ic3.Type = c.xlCondition_percent_databar
             rng_col_fc1_ic3.Operator = 5
             rng_col_fc1_ic3.Value = 0
 
@@ -166,8 +166,8 @@ class RangeStyle:
             rng_col.Style = "Percent"
             rng_col.FormatConditions.AddDatabar()
             rng_col_fc1 = rng.FormatConditions(1)
-            rng_col_fc1.MinPoint.Modify(newtype=c.xlConditionValueNumber, newvalue=0)
-            rng_col_fc1.MaxPoint.Modify(newtype=c.xlConditionValueNumber, newvalue=1)
+            rng_col_fc1.MinPoint.Modify(newtype=c.xlCondition_percent_databar, newvalue=0)
+            rng_col_fc1.MaxPoint.Modify(newtype=c.xlCondition_percent_databar, newvalue=1)
             rng_col_fc1.BarColor.Color = 13012579
             rng_col_fc1.BarColor.TintAndShade = 0
 

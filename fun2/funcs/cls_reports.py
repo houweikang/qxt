@@ -5,18 +5,10 @@
 # @Site    : 
 # @File    : cls_reports.py
 # @Software: PyCharm
-import pandas as pd
-
 from cls_excel import Excel
 from copy import deepcopy
-
-import win32com.client
 from win32com.client import constants as c  # 旨在直接使用VBA常数
-import os
-import numpy as np
-from cls_data_dataframe import DataAsDF
-from cls_date import MyDate
-from cls_sqlserver import ReportDataAsDf
+from cls_sqlserver import ReportDataAsDf, Component
 from fun_date import get_str_date
 from use_os import create_folder_date
 
@@ -31,30 +23,18 @@ class Reports(Excel):
         # 终止日期
         self.final_date = final_date
 
-        # 本月起始日期
-        self.start_date = MyDate(final_date).get_date_Nmonthes_firstday(n=0)
-        self.start_date = get_str_date(self.start_date)
-
-        # 三个月前 起始日期
-        self.start_date_date_3 = MyDate(final_date).get_date_Nmonthes_firstday(n=-3)  # 获取起始日期
-        self.start_str_date_3 = get_str_date(self.start_date_date_3)  # 获取起始日期
-
-        # 三个月前 起始日期
-        self.start_date_date_6 = MyDate(final_date).get_date_Nmonthes_firstday(n=-5)  # 获取起始日期
-        self.start_str_date_6 = get_str_date(self.start_date_date_6)  # 获取起始日期
-
-        # 一个月前 起始日期
-        self.start_str_date_1 = MyDate(final_date).get_date_Nmonthes_firstday(n=-1)  # 获取起始日期
-        self.start_str_date_1 = get_str_date(self.start_str_date_1)  # 获取起始日期
+        # 数据表tab颜色
+        self.tab_colors = ['R', 'DR', 'G', 'DG','Y']
 
         # 分量地区
-        self.component_dqs = ['济南', '燕郊', '成都']
+        self.component_dqs = ['燕郊'] #['济南', '燕郊', '成都']
         # 分量图线条颜色
         self.RGBs = [(255, 255, 0), (0, 112, 192), (0, 176, 80), (255, 0, 0), (255, 255, 255)]  # 黄 蓝 绿 红 白
         self.component_RGB = self.RGBs[:4]
 
         # 其余报表地区
-        self.common_dqs = ['保定', '济南']
+        # self.common_dqs = ['保定', '济南']
+        self.common_dqs = ['保定']
 
         # 图大小
         self.size_long_chart = (0, 170, 1200, 500)
@@ -64,8 +44,8 @@ class Reports(Excel):
         self.size_chart_sixmonth = [(800, 0, 900, 400), (800, 401, 900, 400)]
         self.size_chart_sixmonth_group = [(800, 0, 900, 600), (800, 601, 900, 600)]
 
-        # charttype 0-xlColumnClustered
-        self.chart_type = [c.xlColumnClustered, ]
+        # charttype 0-xlColumnClustered柱状图 1-折线图 2-折线跌涨柱  3-柱状堆积图
+        self.chart_type = [c.xlColumnClustered, c.xlLine, c.xlLineMarkers, c.xlColumnStacked]
 
         # chartplotby 0-xlRows  1-xlColumns
         self.chart_plotby = [c.xlRows, c.xlColumns]
@@ -76,8 +56,6 @@ class Reports(Excel):
         # datalabelposition 0、1 折线  2、3 柱形图 0-数据点上方 1-数据点下方 2-上边缘上方 3-上边缘下方
         self.datalabel_position = [c.xlLabelPositionAbove, c.xlLabelPositionBelow,
                                    c.xlLabelPositionOutsideEnd, c.xlLabelPositionInsideEnd]
-
-
 
     def chart_title(self, text):
         _dict = {
@@ -121,10 +99,8 @@ class Reports(Excel):
     def report_component(self):
         self.screen_updating(False)  # 关闭屏幕刷新
         wb_obj = self.excel.Workbooks.Add()  # 创建excel wb
-        start_date = self.start_str_date_3  # 起始日期
-        final_date = self.final_date  # 终止日期
         for dq in self.component_dqs:
-            df = ReportDataAsDf(dq=dq, start_date=start_date, final_date=final_date).component_df()  # 数据帧
+            df, start_date, final_date = Component(dq=dq, final_date=self.final_date).component_df()  # 数据帧
             # 表
             sheet_name = '%s近%d月日人均分量' % (dq, 4)
 
@@ -133,14 +109,14 @@ class Reports(Excel):
             # 区域副标题
             r_subtitles_v = self.subtitle(start_date, final_date)
             # 区域赋值 并 设定格式
-            sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color='R', df=df,
+            sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=self.tab_colors[4], df=df,
                                                 title_v=r_title_v, subtitles_v=r_subtitles_v)
             # 图
-            chart_size = (0, 170, 1200, 500)
-            chart_type = c.xlLine
+            chart_size = self.size_long_chart
+            chart_type = self.chart_type[1]
             chart_name = sheet_name
-            chart_plotby = c.xlRows
-            chart_style_num = 233
+            chart_plotby = self.chart_plotby[0]
+            chart_style_num = self.chart_style_num[0]
             gridline = False
             # 标题
             chart_title = '%s%s-近%d个月每日人均分量趋势' % ('QX', dq, 4)
@@ -174,8 +150,8 @@ class Reports(Excel):
         wb_obj.Sheets(1).Delete()
         wb_obj.Sheets(1).Select()
         # 保存文件
-        path = create_folder_date(self.root_path, final_date)  # 创建目标文件夹
-        str_date = get_str_date(final_date, '%Y%m%d')
+        path = create_folder_date(self.root_path, self.final_date)  # 创建目标文件夹
+        str_date = get_str_date(self.final_date, '%Y%m%d')
         wb_name = '%s日报_人均分量' % (str_date)
         self.workbook_save(wookbook_obj=wb_obj, name=wb_name, path=path)
         self.screen_updating(True)  # 开启屏幕刷新
@@ -183,42 +159,76 @@ class Reports(Excel):
     # 日报 总
     def reports_day(self):
         for dq in self.common_dqs:
-            # self.screen_updating(False)  # 关闭屏幕刷新
+            self.dq = dq
+            self.screen_updating(False)  # 关闭屏幕刷新
 
-            self.screen_updating(True)  # 开启屏幕刷新
+            # self.screen_updating(True)  # 开启屏幕刷新
 
             wb_obj = self.excel.Workbooks.Add()  # 创建excel wb
-            # 进群率和注册率
-            group_data, team_data, region_data, colege_data = ReportDataAsDf(dq=dq, start_date=self.start_str_date_3,
-                                     final_date=self.final_date).erollment_and_group_entry_rate_df()
 
-            # 近6个月同期对比
-            # sixmonth_group, sixmonth_team, sixmonth_colege, sixmonth_region = ReportDataAsDf(dq,
-            #                                                                                  self.start_str_date_6,
-            #                                                                                  self.final_date).team_six_month()
-            tab_colors = ['R','DR','G','DG']
+            # 数据帧类
+            cls_df = ReportDataAsDf(dq, self.final_date)
+
             # T
-            # self.report_erollment_and_group_entry_rate(wb_obj=wb_obj,tab_color=tab_colors[0],df=region_data)
-            # self.report_erollment_and_group_entry_rate(wb_obj=wb_obj,tab_color=tab_colors[0],df=colege_data)
-            # self.report_erollment_and_group_entry_rate(wb_obj=wb_obj,tab_color=tab_colors[0],df=team_data)
-            # self.report_4monthes_trend(dq=dq, wb_obj=wb_obj)
-            # self.reports_vs_last_month(dq=dq, wb_obj=wb_obj)
-            # self.reports_complete_rate_time_rate(dq=dq, wb_obj=wb_obj)
-            # self.reports_group_leader_rate(dq=dq, wb_obj=wb_obj)
-            # self.reports_team_day_evening(dq=dq, wb_obj=wb_obj)
-            # self.reports_six_month(dq=dq, wb_obj=wb_obj, df=sixmonth_region, tab_color=tab_colors[0])
-            # self.reports_six_month(dq=dq, wb_obj=wb_obj, df=sixmonth_colege, tab_color=tab_colors[0])
-            # self.reports_six_month(dq=dq, wb_obj=wb_obj, df=sixmonth_team, tab_color=tab_colors[0])
-            # self.reports_evening(dq=dq, wb_obj=wb_obj)
+            # 日报4--【(1-3)/4】--进群率和注册率
+            group_er_en, team_er_en, colege_er_en, region_er_en, start_date_er_en = cls_df.erollment_and_group_entry_rate_df()
+            self.report_erollment_and_group_entry_rate(wb_obj=wb_obj, tab_color=None, df=region_er_en,
+                                                       start_date=start_date_er_en)
+            self.report_erollment_and_group_entry_rate(wb_obj=wb_obj, tab_color=self.tab_colors[0], df=colege_er_en,
+                                                       start_date=start_date_er_en)
+            self.report_erollment_and_group_entry_rate(wb_obj=wb_obj, tab_color=self.tab_colors[1], df=team_er_en,
+                                                       start_date=start_date_er_en)
+            # 日报3-近4月趋势
+            dfs_region, dfs_colege, dfs_team, start_date_4month = cls_df.trend_4monthes_df()
+            self.report_4monthes_trend_region(wb_obj=wb_obj,dfs=dfs_region,start_date=start_date_4month)
+            self.report_4monthes_trend_colege(wb_obj=wb_obj,dfs=dfs_colege,start_date=start_date_4month)
+            self.report_4monthes_trend_team(wb_obj=wb_obj,dfs=dfs_team,start_date=start_date_4month)
+            # 日报-上月同期对比
+            self.reports_vs_last_month(wb_obj=wb_obj,cls_df=cls_df)
+            # 日报-时间消耗率与完成率
+            self.reports_complete_rate_time_rate(wb_obj=wb_obj,cls_df=cls_df)
+            # 日报 -- 组长业绩贡献率
+            self.reports_group_leader_rate(wb_obj=wb_obj,cls_df=cls_df)
+            # 日报2--【1/2】 -- 运营部或小组 白天夜间业绩对比
+            df_group_day_evening, df_team_day_evening, start_date_team_day_evening = cls_df.group_team_day_evening()
+            self.reports_team_day_evening(wb_obj=wb_obj, df=df_team_day_evening, start_date=start_date_team_day_evening,
+                                          r_type=0)
+            # 日报4--【(1-3)/4】-近6个月同期对比
+            sixmonth_group, sixmonth_team, sixmonth_colege, sixmonth_region,start_date_sixmonth = cls_df.team_six_month()
+            self.reports_six_month(dq=dq, wb_obj=wb_obj, df=sixmonth_region, tab_color=self.tab_colors[4],start_date=start_date_sixmonth)
+            self.reports_six_month(dq=dq, wb_obj=wb_obj, df=sixmonth_colege, tab_color=self.tab_colors[0],start_date=start_date_sixmonth)
+            self.reports_six_month(dq=dq, wb_obj=wb_obj, df=sixmonth_team, tab_color=self.tab_colors[0],start_date=start_date_sixmonth)
+            #日报2-【1/2】- 夜间业绩对比
+            df_group_evening,df_team_evening, start_date_evening = cls_df.evening()
+            self.reports_evening(wb_obj=wb_obj,df=df_team_evening,start_date=start_date_evening,tab_color=self.tab_colors[0],type=0)
 
             # G
-            # self.reports_group_peoplelist(dq=dq, wb_obj=wb_obj)
-            # self.reports_complete_rate(dq=dq, wb_obj=wb_obj)
-            # self.report_erollment_and_group_entry_rate(wb_obj=wb_obj,tab_color=tab_colors[2],df=group_data)
-
-
-            # self.reports_six_month(dq=dq, wb_obj=wb_obj, df=sixmonth_group, tab_color=tab_colors[2])
-
+            # 日报-人员信息统计
+            self.reports_group_peoplelist(wb_obj=wb_obj,cls_df=cls_df)
+            # 日报-业绩目标完成率
+            self.reports_complete_rate(wb_obj=wb_obj,cls_df=cls_df)
+            # 日报4--【4/4】--进群率和注册率
+            self.report_erollment_and_group_entry_rate(wb_obj=wb_obj, tab_color=self.tab_colors[2], df=group_er_en,
+                                                       start_date=start_date_er_en)
+            # 日报-组长组员日人均业绩
+            self.reports_group_leader_member(wb_obj=wb_obj, cls_df=cls_df)
+            # 日报 -- 当日业绩统计
+            self.reports_people_performance(wb_obj=wb_obj, cls_df=cls_df)
+            # 日报 -- 推广专员月内日均创量排名
+            self.reports_people_month_avg_rank(wb_obj=wb_obj,  cls_df=cls_df)
+            # 日报2 -- 1-推广小组组长当月与上月日均业绩对比 2-推广组组长当月业绩排名
+            self.reports_groupleader_vs_lastmonth_avg(wb_obj=wb_obj, cls_df=cls_df) # 两个报表
+            #日报2-【2/2】- 夜间业绩对比
+            self.reports_evening(wb_obj=wb_obj,df=df_group_evening,start_date=start_date_evening,tab_color=self.tab_colors[2],type=1)
+            # 日报 -日阶段完成任务次数
+            self.reports_days_finish(wb_obj=wb_obj, cls_df=cls_df)
+            #日报 - 推广小组日均排名
+            self.reports_groups_avg_rank_peoples(wb_obj=wb_obj, cls_df=cls_df)
+            # 日报2--【2/2】 -- 小组白天夜间业绩对比
+            self.reports_team_day_evening(wb_obj=wb_obj, df=df_group_day_evening, start_date=start_date_team_day_evening,
+                                          r_type=1)
+            # 日报4--【4/4】-近6个月同期对比
+            self.reports_six_month(dq=dq, wb_obj=wb_obj, df=sixmonth_group, tab_color=self.tab_colors[2],start_date=start_date_sixmonth)
 
             wb_obj.Sheets(1).Delete()
             wb_obj.Sheets(1).Select()
@@ -228,16 +238,14 @@ class Reports(Excel):
             str_date = get_str_date(self.final_date, '%Y%m%d')
             wb_name = '%s%s日报' % (str_date, dq)
             self.workbook_save(wookbook_obj=wb_obj, name=wb_name, path=path)
-            # self.screen_updating(True)  # 开启屏幕刷新
+            self.screen_updating(True)  # 开启屏幕刷新
 
-    # 日报 - 注册率与进群率
-    def report_erollment_and_group_entry_rate(self, wb_obj, tab_color,df):
-        start_date = self.start_str_date_3
-        final_date = self.final_date
+    # 日报 - 推广进群率与注册率统计
+    def report_erollment_and_group_entry_rate(self, wb_obj, tab_color, df, start_date):
         dep = df.columns[-6]
         sheet_name = '%s推广进群率与注册率统计' % dep
         title = sheet_name
-        subtitles = self.subtitle(start_date, final_date)
+        subtitles = self.subtitle(start_date, self.final_date)
         self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
                           title_v=title, subtitles_v=subtitles)
 
@@ -279,7 +287,6 @@ class Reports(Excel):
                 }
             }
         }
-
         # 标签2
         s2_dict = {
             '[-2,:]': {
@@ -301,58 +308,53 @@ class Reports(Excel):
                           legend=legend_dict, ticklabel=ticklabel_dict, datatable=datatable_dict,
                           series=series_dict, point=p_list)
 
-    # 日报 - 近4个月趋势
-    def report_4monthes_trend(self, dq, wb_obj):
-        start_date = self.start_str_date_3
-        final_date = self.final_date
-        # 数据帧
-        dfs_region, dfs_colege, dfs_team = ReportDataAsDf(dq=dq, start_date=start_date,
-                                                          final_date=final_date).trend_4monthes_df()
-        for df in dfs_region:
+    # 日报 - 近4个月趋势—地区
+    def report_4monthes_trend_region(self, wb_obj, dfs, start_date):
+        for df in dfs:
             dep = df.iloc[0, 0]
             sheet_name = '%s日创量趋势' % dep
             title = sheet_name
-            subtitles = self.subtitle(start_date, final_date)
-            sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color='R', df=df,
+            subtitles = self.subtitle(start_date, self.final_date)
+            sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=self.tab_colors[4], df=df,
                                                 title_v=title, subtitles_v=subtitles)
             chart_data_rng = sht_obj.Range(sht_obj.Range('b3'), sht_obj.Cells(rs, cs))
             self.chart_4monthes_trend(dep, sht_obj, chart_data_rng)
 
-        for df in dfs_colege:
+    # 日报 - 近4个月趋势-学院
+    def report_4monthes_trend_colege(self, wb_obj, dfs, start_date):
+        for df in dfs:
             dep = ''.join(list(df.iloc[0, :2]))
             sheet_name = '%s日创量趋势' % dep
             title = sheet_name
-            subtitles = self.subtitle(start_date, final_date)
-            sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color='R', df=df,
+            subtitles = self.subtitle(start_date, self.final_date)
+            sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=self.tab_colors[0], df=df,
                                                 title_v=title, subtitles_v=subtitles)
             chart_data_rng = sht_obj.Range(sht_obj.Range('c3'), sht_obj.Cells(rs, cs))
             self.chart_4monthes_trend(dep, sht_obj, chart_data_rng)
 
-        for df in dfs_team:
+    # 日报 - 近4个月趋势-运营部
+    def report_4monthes_trend_team(self, wb_obj, dfs, start_date):
+        for df in dfs:
             dep = ''.join(list(df.iloc[0, :3]))
             sheet_name = '%s日创量趋势' % dep
             title = sheet_name
-            subtitles = self.subtitle(start_date, final_date)
-            sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color='R', df=df,
+            subtitles = self.subtitle(start_date, self.final_date)
+            sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=self.tab_colors[0], df=df,
                                                 title_v=title, subtitles_v=subtitles)
             chart_data_rng = sht_obj.Range(sht_obj.Range('d3'), sht_obj.Cells(rs, cs))
             self.chart_4monthes_trend(dep, sht_obj, chart_data_rng)
 
     # 日报 -- 与上月同期业绩对比
-    def reports_vs_last_month(self, dq, wb_obj):
-        start_date = self.start_date
-        final_date = self.final_date
-        df = ReportDataAsDf(dq, start_date, final_date).vs_last_month_df()
-        tab_color = 'R'
-
+    def reports_vs_last_month(self, wb_obj, cls_df):
+        df, start_date = cls_df.vs_last_month_df()
         sheet_name = '与上月同期业绩对比'
         title = sheet_name
-        subtitles = self.subtitle(start_date, final_date)
-        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
+        subtitles = self.subtitle(start_date, self.final_date)
+        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=self.tab_colors[0], df=df,
                                             title_v=title, subtitles_v=subtitles)
 
         title_date_start = get_str_date(start_date, format='%m.%d')
-        title_date_final = get_str_date(final_date, format='%m.%d')
+        title_date_final = get_str_date(self.final_date, format='%m.%d')
         chart_title = '%s-%s推广业绩与上月同期对比' % (title_date_start, title_date_final)
 
         # 图
@@ -381,9 +383,6 @@ class Reports(Excel):
                 }
             }
         }
-
-        # s2_dict = s1_dict.copy()
-        # s2_dict['s_num'] = 1
 
         s3_dict = {
             '[-2,-1]': {
@@ -424,8 +423,6 @@ class Reports(Excel):
                 }
             }
         }
-        # s4_dict['s_num'] = -1
-        # s4_dict['style']['font']['color'] = 49407
 
         p_dict = [s1_s2_dict, s3_dict, s4_dict]
 
@@ -436,25 +433,21 @@ class Reports(Excel):
                           ticklabel=ticklabel_dict, series=series_dict, point=p_dict)
 
     # 日报 -- 完成率与时间消耗率
-    def reports_complete_rate_time_rate(self, dq, wb_obj):
-        start_date = self.start_date
-        final_date = self.final_date
-        df = ReportDataAsDf(dq, start_date, final_date).complete_rate_time_rate_df()
-        tab_color = 'R'
-
+    def reports_complete_rate_time_rate(self, wb_obj, cls_df):
+        df, start_date = cls_df.complete_rate_time_rate_df()
         sheet_name = '完成率与时间消耗率'
-        title = '{}各运营部{}'.format(dq, sheet_name)
-        subtitles = self.subtitle(start_date, final_date)
-        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
+        title = '各运营部{}'.format(sheet_name)
+        subtitles = self.subtitle(start_date, self.final_date)
+        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=self.tab_colors[0], df=df,
                                             title_v=title, subtitles_v=subtitles)
         # 图
         chart_name = sheet_name
         title_date_start = get_str_date(start_date, format='%m.%d')
-        title_date_final = get_str_date(final_date, format='%m.%d')
+        title_date_final = get_str_date(self.final_date, format='%m.%d')
         chart_title = '%s-%s完成率与时间消耗率涨跌图' % (title_date_start, title_date_final)
-        chart_plotby = c.xlColumns
-        charttype = c.xlLineMarkers
-        chart_size = (0, 170, 900, 400)
+        chart_plotby = self.chart_plotby[1]  # c.xlColumns
+        charttype = self.chart_type[2]  # c.xlLineMarkers
+        chart_size = self.size_chart  # (0, 170, 900, 400)
         chart_rng = sht_obj.Range('c3', 'e%d' % rs)
         # 标题
         chart_title_dict = self.chart_title(chart_title)
@@ -469,7 +462,6 @@ class Reports(Excel):
             }
             }
         ]
-
         # 标签1
         s1_dict = {
             '[0,:]': {
@@ -496,7 +488,6 @@ class Reports(Excel):
         }
         # 标签2
         p_list = [s1_dict, ]
-
         # 跌涨柱颜色
         downupbars = [
             {'upbars': {
@@ -527,25 +518,21 @@ class Reports(Excel):
                           series=series_dict, point=p_list, updownbars=downupbars)
 
     # 日报 -- 组长业绩贡献率
-    def reports_group_leader_rate(self, dq, wb_obj):
-        start_date = self.start_date
-        final_date = self.final_date
-        df = ReportDataAsDf(dq, start_date, final_date).group_leader_rate()
-        tab_color = 'R'
-
+    def reports_group_leader_rate(self, wb_obj, cls_df):
+        df, start_date = cls_df.group_leader_rate()
         sheet_name = '组长业绩贡献率'
-        title = '{}各运营部{}'.format(dq, sheet_name)
-        subtitles = self.subtitle(start_date, final_date)
-        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
+        title = sheet_name
+        subtitles = self.subtitle(start_date, self.final_date)
+        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=self.tab_colors[0], df=df,
                                             title_v=title, subtitles_v=subtitles)
         # 图
         chart_name = sheet_name
         title_date_start = get_str_date(start_date, format='%m.%d')
-        title_date_final = get_str_date(final_date, format='%m.%d')
-        chart_title = '%s-%s%s推广小组组长业绩贡献率' % (title_date_start, title_date_final, dq)
-        chart_plotby = c.xlColumns
-        charttype = c.xlColumnStacked
-        chart_size = (0, 170, 900, 400)
+        title_date_final = get_str_date(self.final_date, format='%m.%d')
+        chart_title = '%s-%s 推广小组组长业绩贡献率' % (title_date_start, title_date_final)
+        chart_plotby = self.chart_plotby[1]  # c.xlColumns
+        charttype = self.chart_type[3]  # c.xlColumnStacked
+        chart_size = self.size_chart  # (0, 170, 900, 400)
         chart_rng = sht_obj.Range('c3', 'g%d' % rs)
         # 标题
         chart_title_dict = self.chart_title(chart_title)
@@ -554,7 +541,7 @@ class Reports(Excel):
         # 坐标轴
         ticklabel_dict = self.chart_ticklabel()
         # 数据表
-        datatable_dict = ticklabel_dict
+        datatable_dict = self.chart_datatable()
         # 系列
         series_dict = [
             {-1: {
@@ -598,27 +585,31 @@ class Reports(Excel):
                           series=series_dict, point=p_list)
 
     # 日报 -- 运营部白天夜间业绩对比
-    def reports_team_day_evening(self, dq, wb_obj):
-        start_date = self.start_date
-        final_date = self.final_date
-        df = ReportDataAsDf(dq, start_date, final_date).team_day_evening()
-        tab_color = 'R'
+    def reports_team_day_evening(self, wb_obj, df, start_date, r_type):
+        if r_type == 0:
+            data_type = '运营部'
+            tab_color = self.tab_colors[0]
+        elif r_type == 1:
+            data_type = '推广小组'
+            tab_color = self.tab_colors[2]
+        else:
+            raise Exception('r_type Error')
 
-        sheet_name = '运营部白天夜间业绩对比'
+        sheet_name = f'{data_type}白天夜间业绩对比'
         title = sheet_name
-        subtitles = self.subtitle(start_date, final_date)
+        subtitles = self.subtitle(start_date, self.final_date)
         sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
                                             title_v=title, subtitles_v=subtitles)
         # 图
         title_date_start = get_str_date(start_date, format='%m.%d')
-        title_date_final = get_str_date(final_date, format='%m.%d')
-        chart_title = '%s-%s %s地区各运营部业绩对比' % (title_date_start, title_date_final, dq)
+        title_date_final = get_str_date(self.final_date, format='%m.%d')
+        chart_title = '%s-%s 各%s业绩对比' % (title_date_start, title_date_final,data_type)
 
         chart_name = sheet_name
-        charttype = c.xlColumnStacked  # 类型
-        chart_plotby = c.xlColumns
+        charttype = self.chart_type[3]  # c.xlColumnStacked  # 类型
+        chart_plotby = self.chart_plotby[1]  # c.xlColumns
         chart_size = self.size_chart_datatable
-        chart_data_rng = sht_obj.Range('c3', 'i%d' % rs)
+        chart_data_rng = sht_obj.Range('c3', sht_obj.Cells(rs,cs-1))
         # 标题
         chart_title_dict = self.chart_title(chart_title)
         # 图例
@@ -688,13 +679,11 @@ class Reports(Excel):
                           ticklabel=ticklabel_dict, series=series_dict, point=p_dict)
 
     # 日报 -- 近6个月同期对比
-    def reports_six_month(self, dq, wb_obj, df, tab_color):
-        start_date = self.start_str_date_1
-        final_date = self.final_date
+    def reports_six_month(self, dq, wb_obj, df, tab_color, start_date):
         cols = list(df.columns)
         sheet_name = f'{cols[-7]}近6个月同期对比'
         title = sheet_name
-        subtitles = self.subtitle(start_date, final_date)
+        subtitles = self.subtitle(start_date, self.final_date)
         sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
                                             title_v=title, subtitles_v=subtitles)
         css = cs - 8
@@ -745,7 +734,17 @@ class Reports(Excel):
 
             data_rng = [rng_all, rng_avg]
 
-            if n == 1 and i == 0 and css == 0:
+            if n == 1 and i == 0 and (css == 0 or css == 1):
+                cell = sht_obj.Cells(1, cs + 1)
+                if css == 0:
+                    cell.Value = '只发日人均创量到全国群'
+                elif css == 1:
+                    cell.Value = '只发日同期创量到业务群'
+
+                cell.Font.Bold = True
+                cell.Font.Size = 20
+                cell.Font.Color = 255
+
                 sht_obj.Cells(rs + 1, 1).Value = '增长量'
                 for _ in range(2, cs - 5):
                     sht_obj.Cells(rs + 1, _).Value = sht_obj.Cells(rs, _).Value
@@ -864,20 +863,17 @@ class Reports(Excel):
                               ticklabel=ticklabel_dict, series=series_dict, point=p_dict)
 
     # 日报 -- 运营部晚间业绩对比
-    def reports_evening(self, dq, wb_obj):
-        start_date = self.start_date
-        final_date = self.final_date
-        df = ReportDataAsDf(dq, start_date, final_date).team_evening()
-        tab_color = 'R'
+    def reports_evening(self, wb_obj, df, start_date, tab_color, type):
+        types = ['运营部', '推广小组']
 
-        sheet_name = '各运营部夜间业绩对比'
+        sheet_name = f'各{types[type]}夜间业绩对比'
         title = sheet_name
-        subtitles = self.subtitle(start_date, final_date)
+        subtitles = self.subtitle(start_date, self.final_date)
         sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
                                             title_v=title, subtitles_v=subtitles)
 
         title_date_start = get_str_date(start_date, format='%m.%d')
-        title_date_final = get_str_date(final_date, format='%m.%d')
+        title_date_final = get_str_date(self.final_date, format='%m.%d')
         chart_title = '%s-%s %s' % (title_date_start, title_date_final, sheet_name)
 
         # 图
@@ -906,9 +902,153 @@ class Reports(Excel):
                 }
             }
         }
-
         s2_dict = {
             '[-1,-1]': {
+                'datalabels': {
+                    'font': {
+                        'name': self.font_name,
+                        'size': self.medium_size,
+                        'bold': True,
+                        'color': (255, 0, 0)
+                    },
+                    'position': 0,
+                    'format': {
+                        'line': {
+                            'ForeColor': {'RGB': (91, 155, 213)},
+                            'visible': -1,
+                            'weight': 1.1
+                        },
+                        'fill': {
+                            'forecolor': {'rgb': (240, 240, 240)}
+                        }
+                    }
+                }
+            }
+        }
+        p_dict = [s1_dict, s2_dict, ]
+        self.common_chart(sht_obj=sht_obj, chart_data_rng_obj=chart_data_rng, chart_name=chart_name,
+                          chart_type=charttype, chart_size=self.size_chart,
+                          chart_plotby=chart_plotby, gridline=False, chart_title=chart_title_dict,
+                          legend=legend_dict,
+                          ticklabel=ticklabel_dict, series=series_dict, point=p_dict)
+
+    # 日报 -- 运营部人员信息
+    def reports_group_peoplelist(self, wb_obj, cls_df):
+        df, start_date = cls_df.team_peoplelist()
+        tab_color = self.tab_colors[2]
+        sheet_name = '人员信息统计'
+        title = sheet_name
+        subtitles = self.subtitle(start_date, self.final_date)
+        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
+                                            title_v=title, subtitles_v=subtitles)
+        rs1_rng = sht_obj.Cells(rs + 1, 1)
+        rs1_d = {
+            'value': '注：本月新人离职率=本月新进员工离职数/本月入职数     本月离职率=本月离职人数/（本月在职人数+本月离职人数）',
+            'HorizontalAlignment': c.xlLeft,
+            'VerticalAlignment': c.xlCenter,
+            'font': {
+                'name': self.font_name,
+                'size': 11,
+                'color': -16776961
+            }
+        }
+        self.range_style(rs1_rng, **rs1_d)
+        row3 = sht_obj.Rows(3)
+        row3_d = {
+            'WrapText': True,
+            'RowHeight': 55
+        }
+        self.row_style(row3, **row3_d)
+        sht_obj.Columns("D:D").ColumnWidth = 11
+        sht_obj.Columns("F:Q").ColumnWidth = 8
+        sht_obj.Columns("R:R").ColumnWidth = 12
+        sht_obj.Columns("S:T").ColumnWidth = 7
+        sht_obj.Columns("U:V").ColumnWidth = 8.5
+        sht_obj.Columns("W:X").ColumnWidth = 13
+
+        # 合并单元格
+        merge_rng = sht_obj.Range('a4', f'c{rs}')
+        self.merge(sht_obj=sht_obj, rng=merge_rng, column_list=[1, 2, 3])
+        # 加粗行
+        bold_rng = sht_obj.UsedRange
+        self.bold(bold_rng, [4], tag='总计')
+        sht_obj.Rows(f'4:{rs}').RowHeight = 25
+        sht_obj.UsedRange.Select()
+
+    # 日报 -- 目标完成率
+    def reports_complete_rate(self, wb_obj, cls_df):
+        df, start_date = cls_df.complete_rate_df()
+        tab_color = self.tab_colors[3]
+        sheet_name = '业绩目标完成率'
+        title = f'QX{self.dq}-{sheet_name}'
+        subtitles = self.subtitle(start_date, self.final_date)
+        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
+                                            title_v=title, subtitles_v=subtitles)
+        # 合并单元格
+        merge_rng = sht_obj.Range('a4', f'c{rs}')
+        self.merge(sht_obj=sht_obj, rng=merge_rng, column_list=[1, 2, 3])
+        # 加粗行
+        bold_rng = sht_obj.UsedRange
+        self.bold(bold_rng, [4], tag='总计')
+
+        # 三角
+        xltrigle_rng = sht_obj.Range('g4', f'g{rs}')
+        self.xl3Triangles(xltrigle_rng, columnlist=[1])
+        # 数据条
+        databar_rng = xltrigle_rng.GetOffset(0, 1)
+        self.xlCondition_percent_databar(databar_rng, columnlist=[1])
+
+        sht_obj.UsedRange.Cells.Columns.ColumnWidth = 17
+        sht_obj.Rows(f'4:{rs}').RowHeight = 25
+
+        sht_obj.UsedRange.Select()
+
+    # 日报 -- 组长组员日人均业绩
+    def reports_group_leader_member(self, wb_obj, cls_df):
+        df, start_date = cls_df.group_leader_member()
+        tab_color = self.tab_colors[2]
+        sheet_name = '组长和组员日人均业绩合格率对比'
+        title = sheet_name
+        subtitles = self.subtitle(start_date, self.final_date)
+        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
+                                            title_v=title, subtitles_v=subtitles)
+        # 合并单元格
+        merge_rng = sht_obj.Range('a4', f'c{rs}')
+        self.merge(sht_obj=sht_obj, rng=merge_rng, column_list=[1, 2, 3])
+        # 图
+        title_date_start = get_str_date(start_date, format='%m.%d')
+        title_date_final = get_str_date(self.final_date, format='%m.%d')
+        chart_title = '%s-%s推广小组组长和组内人员日人均合格率对比图' % (title_date_start, title_date_final)
+
+        # 图
+        chart_name = sheet_name
+        charttype = c.xlColumnClustered  # 类型
+        chart_plotby = c.xlColumns
+        chart_data_rng = sht_obj.Range(sht_obj.Range('c3'), sht_obj.Cells(rs, 8))
+        # 标题
+        chart_title_dict = self.chart_title(chart_title)
+        # 图例
+        legend_dict = self.chart_legend()
+        # 坐标轴
+        ticklabel_dict = self.chart_ticklabel()
+        # 数据系列标签
+        series_dict = [
+            {(-1, -2): {'charttype': c.xlLine}}
+        ]
+        # point
+        s1_s2_dict = {
+            '[0:2,:]': {
+                'datalabels': {
+                    'font': {
+                        'name': self.font_name,
+                        'size': self.medium_size
+                    },
+                }
+            }
+        }
+
+        s3_dict = {
+            '[-2,-1]': {
                 'datalabels': {
                     'font': {
                         'name': self.font_name,
@@ -926,120 +1066,121 @@ class Reports(Excel):
                 }
             }
         }
-        p_dict = [s1_dict, s2_dict, ]
+
+        s4_dict = {
+            '[-1,-1]': {
+                'datalabels': {
+                    'font': {
+                        'name': self.font_name,
+                        'size': 15,
+                        'bold': True,
+                        'color': 49407
+                    },
+                    'position': 0,
+                    'format': {'line': {
+                        'ForeColor': {'RGB': (91, 155, 213)},
+                        'visible': -1,
+                        'weight': 1.1
+                    }
+                    }
+                }
+            }
+        }
+
+        p_dict = [s1_s2_dict, s3_dict, s4_dict]
+
         self.common_chart(sht_obj=sht_obj, chart_data_rng_obj=chart_data_rng, chart_name=chart_name,
                           chart_type=charttype, chart_size=self.size_chart,
                           chart_plotby=chart_plotby, gridline=False, chart_title=chart_title_dict,
                           legend=legend_dict,
                           ticklabel=ticklabel_dict, series=series_dict, point=p_dict)
 
-    # 日报 -- 运营部人员信息
-    def reports_group_peoplelist(self, dq, wb_obj):
-        start_date = self.start_date
-        final_date = self.final_date
-        df = ReportDataAsDf(dq, start_date, final_date).team_peoplelist()
-        tab_color = 'G'
-        sheet_name = '人员信息统计'
+    # 日报 -- 当日业绩统计
+    def reports_people_performance(self, wb_obj, cls_df):
+        df, start_date = cls_df.people_performance()
+        sheet_name = '推广专员当日业绩统计'
         title = sheet_name
-        subtitles = self.subtitle(start_date, final_date)
-        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
-                                            title_v=title, subtitles_v=subtitles)
-        rs1_rng = sht_obj.Cells(rs+1,1)
-        rs1_d = {
-            'value':'注：本月新人离职率=本月新进员工离职数/本月入职数     本月离职率=本月离职人数/（本月在职人数+本月离职人数）',
-            'HorizontalAlignment':c.xlLeft,
-            'VerticalAlignment':c.xlCenter,
-             'font':{
-                 'name':self.font_name,
-                 'size':11,
-                 'color':-16776961
-            }
-         }
-        self.range_style(rs1_rng,**rs1_d)
-        row3= sht_obj.Rows(3)
-        row3_d = {
-            'WrapText':True,
-            'RowHeight':55
-        }
-        self.row_style(row3,**row3_d)
-        sht_obj.Columns("D:D").ColumnWidth = 11
-        sht_obj.Columns("F:Q").ColumnWidth = 8
-        sht_obj.Columns("R:R").ColumnWidth = 12
-        sht_obj.Columns("S:T").ColumnWidth = 7
-        sht_obj.Columns("U:V").ColumnWidth = 8.5
-        sht_obj.Columns("W:X").ColumnWidth = 13
-
-        #合并单元格
-        merge_rng = sht_obj.Range('a4',f'c{rs}')
-        self.merge(sht_obj=sht_obj,rng=merge_rng,column_list=[1,2,3])
-        #加粗行
-        bold_rng= sht_obj.UsedRange
-        self.bold(bold_rng,[4],tag='总计')
-        sht_obj.Rows(f'4:{rs}').RowHeight = 25
-        sht_obj.UsedRange.Select()
-
-    # 日报 -- 目标完成率
-    def reports_complete_rate(self, dq, wb_obj):
-        start_date = self.start_date
-        final_date = self.final_date
-        df = ReportDataAsDf(dq, start_date, final_date).complete_rate_df()
-        tab_color = 'G'
-
-        sheet_name = '业绩目标完成率'
-        title = f'QX{dq}-{sheet_name}'
-        subtitles = self.subtitle(start_date, final_date)
-        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
-                                            title_v=title, subtitles_v=subtitles)
+        subtitles = self.subtitle(self.final_date)
+        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=self.tab_colors[2], df=df,
+                                            title_v=title, subtitles_v=subtitles, shadow=True)
         # 合并单元格
-        merge_rng = sht_obj.Range('a4', f'c{rs}')
-        self.merge(sht_obj=sht_obj, rng=merge_rng, column_list=[1, 2, 3])
-        # 加粗行
-        bold_rng = sht_obj.UsedRange
-        self.bold(bold_rng, [4], tag='总计')
+        interior_rng = sht_obj.Range('i4', f'i{rs}')
+        for rng in interior_rng:
+            if rng.Value < 30:
+                rng.Interior.Color = 11854022  # 蓝色
+            elif rng.Value < 50:
+                rng.Interior.Color = 8781823  # 绿色
+            elif rng.Value < 100:
+                rng.Interior.Color = 7697919  # 红色
+            else:
+                rng.Interior.Color = 49407  # 橙色
 
-        # 三角
-        xltrigle_rng = sht_obj.Range('g4',f'g{rs}')
-        self.xl3Triangles(xltrigle_rng,columnlist=[1])
-        # 数据条
-        databar_rng = xltrigle_rng.GetOffset(0,1)
-        self.xlConditionValueNumber(databar_rng,columnlist=[1])
+    # 日报 -- 推广专员月内日均创量排名
+    def reports_people_month_avg_rank(self, wb_obj, cls_df):
+        df, start_date = cls_df.people_month_avg_rank()
+        tab_color = self.tab_colors[2]
 
-        sht_obj.UsedRange.Cells.Columns.ColumnWidth = 17
-        sht_obj.Rows(f'4:{rs}').RowHeight = 25
-
-        sht_obj.UsedRange.Select()
-
-    # 日报 -- 组长组员日人均业绩
-    #todo
-    def reports_group_leader_menber(self, dq, wb_obj):
-        start_date = self.start_date
-        final_date = self.final_date
-        df = ReportDataAsDf(dq, start_date, final_date).complete_rate_df()
-        tab_color = 'G'
-
-        sheet_name = '业绩目标完成率'
-        title = f'QX{dq}-{sheet_name}'
-        subtitles = self.subtitle(start_date, final_date)
+        sheet_name = '推广专员月内日均业绩排名'
+        title = sheet_name
+        subtitles = self.subtitle(self.final_date)
         sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
-                                            title_v=title, subtitles_v=subtitles)
-        # 合并单元格
-        merge_rng = sht_obj.Range('a4', f'c{rs}')
-        self.merge(sht_obj=sht_obj, rng=merge_rng, column_list=[1, 2, 3])
-        # 加粗行
-        bold_rng = sht_obj.UsedRange
-        self.bold(bold_rng, [4], tag='总计')
+                                            title_v=title, subtitles_v=subtitles, shadow=True)
 
-        # 三角
-        xltrigle_rng = sht_obj.Range('g4',f'g{rs}')
-        self.xl3Triangles(xltrigle_rng,columnlist=[1])
-        # 数据条
-        databar_rng = xltrigle_rng.GetOffset(0,1)
-        self.xlConditionValueNumber(databar_rng,columnlist=[1])
+    # 日报2 -- 日报2 -- 1-推广小组组长当月与上月日均业绩对比 2-推广组组长当月业绩排名
+    def reports_groupleader_vs_lastmonth_avg(self, wb_obj, cls_df):
+        df1, df2, avg_line, start_date = cls_df.groupleader_vs_lastmonth_avg()
+        tab_color = self.tab_colors[2]
 
-        sht_obj.UsedRange.Cells.Columns.ColumnWidth = 17
-        sht_obj.Rows(f'4:{rs}').RowHeight = 25
+        sheet_name1 = '推广小组组长当月与上月日均业绩对比'
+        title1 = sheet_name1
+        subtitles1 = self.subtitle(self.final_date)
+        sht_obj1, rs1, cs1 = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name1, tab_color=tab_color, df=df1,
+                                               title_v=title1, subtitles_v=subtitles1, shadow=True)
 
-        sht_obj.UsedRange.Select()
+        sheet_name2 = '推广组组长当月业绩排名'
+        title2 = f'{sheet_name2}(均量平均线={avg_line})'
+        subtitles2 = self.subtitle(start_date, self.final_date)
+        sht_obj2, rs2, cs2 = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name2, tab_color=tab_color, df=df2,
+                                               title_v=title2, subtitles_v=subtitles2, shadow=True)
+
+    #日报 -日阶段完成任务次数
+    def reports_days_finish(self,wb_obj,cls_df):
+        df, start_date = cls_df.days_finish()
+        tab_color = self.tab_colors[2]
+        sheet_name = '推广小组日阶段完成任务次数统计'
+        title = sheet_name
+        subtitles = self.subtitle(start_date,self.final_date)
+        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
+                                               title_v=title, subtitles_v=subtitles, shadow=True)
+
+        for cel in sht_obj.Range('e4',sht_obj.Cells(rs,cs-4)):
+            if cel.Value > 750:
+                cel.Interior.Color = 49407 #橙色
+                if cel.Value > 1000:
+                    cel.Interior.Color = 8781823 #黄色
+
+        percent_databar_rng = sht_obj.Range(sht_obj.Cells(4,cs-1),sht_obj.Cells(rs,cs-1))
+        self.xlCondition_percent_databar(percent_databar_rng, columnlist=[1])
+
+        maxmin_databar_rng1 = percent_databar_rng.GetOffset(0,-2) #750
+        maxmin_databar_rng2 = percent_databar_rng.GetOffset(0,-1) #1000
+        self.xlCondition_maxmin_databar(rng=maxmin_databar_rng1,columnlist=[1],color=8700771)
+        self.xlCondition_maxmin_databar(rng=maxmin_databar_rng2,columnlist=[1],color=2668287)
+
+    # 日报 - 推广小组日均业绩排名详情
+    def reports_groups_avg_rank_peoples(self, wb_obj,cls_df):
+        df, start_date = cls_df.groups_avg_rank_peoples()
+        tab_color = self.tab_colors[2]
+
+        sheet_name = '推广小组日均业绩排名'
+        title = sheet_name
+        subtitles = self.subtitle(start_date,self.final_date)
+        sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=tab_color, df=df,
+                                            title_v=title, subtitles_v=subtitles, shadow=True)
+
 if __name__ == '__main__':
-    # Reports('2020/5/22').report_component()
-    Reports('2020/5/27').reports_day()
+    r = Reports('2020/6/7')
+    # r.report_component()
+    r.reports_day()
+    # Reports('2020/6/2').report_component()
+    # Reports('2020/6/7').reports_day()
