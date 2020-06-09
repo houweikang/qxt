@@ -13,7 +13,7 @@ from pandas import DataFrame
 import pandas as pd
 from cls_date import MyDate, get_str_date
 from fun_df import format_series_percentage, reindex_cols, fun_groupby, cartesian_product_df, \
-    fill_na, FormatSeriesOfDf
+    fill_na, FormatSeriesOfDf, merge_many_dfs
 
 
 class Odbc:
@@ -46,7 +46,7 @@ class Odbc:
 
 
 class MySqlServer(Odbc):
-    def __init__(self, dq, start_date=None, final_date=None):
+    def __init__(self, dq, start_date=None, final_date=None, table_name='Tg'):
         dr = 'SQL Server Native Client 11.0'  # driver
         # sv = "192.168.1.43"  # 服务器名称
         sv = 'localhost'  # 服务器名称
@@ -58,6 +58,18 @@ class MySqlServer(Odbc):
         self.dq = dq
         self.start_date = start_date
         self.final_date = final_date
+        self.table_name = table_name
+
+        self.dict_substituet = {
+            '1战队': '运营一部',
+            '2战队': '运营二部',
+            '3战队': '运营三部',
+            '4战队': '运营四部',
+            '5战队': '运营五部',
+            '6战队': '运营六部',
+            '7战队': '运营七部',
+            '8战队': '运营八部',
+        }
 
     def get_Peoplelist(self):
         sql = '''SELECT [员工姓名]
@@ -77,9 +89,11 @@ class MySqlServer(Odbc):
                   ,[离职日期]
               FROM [QXT].[dbo].[PeopleList]
               WHERE [地区] = '%s' ''' % self.dq
-        return self.operate_DB(sql)
+        df = self.operate_DB(sql)
+        df['运营部'] = df['运营部'].map(self.dict_substituet)
+        return df
 
-    def get_tg_data(self, table_name='Tg'):
+    def get_tg_data(self):
         '''
         新增了 [提交日期] type(date) ; [提交小时] type(int)
         :param table_name: Tg or HourTg
@@ -114,11 +128,13 @@ class MySqlServer(Odbc):
                   ,DATEPART(hh, [提交时间]) [提交小时]
               FROM [QXT].[dbo].[{}]
               WHERE [推广专员-所属地区] = '{}'
-                    and CAST([提交时间] as date) between '{}' and '{}' '''.format(table_name, self.dq, self.start_date,
+                    and CAST([提交时间] as date) between '{}' and '{}' '''.format(self.table_name, self.dq, self.start_date,
                                                                               self.final_date)
-        return self.operate_DB(sql)
+        df = self.operate_DB(sql)
+        df['运营部'] = df['运营部'].map(self.dict_substituet)
+        return df
 
-    def get_tg_data_where_guwen(self, table_name='Tg'):
+    def get_tg_data_where_guwen(self):
         '''
         新增了 [提交日期] type(date) ; [提交小时] type(int)
         :param table_name: Tg or HourTg
@@ -153,9 +169,12 @@ class MySqlServer(Odbc):
                     ,DATEPART(hh, [提交时间]) [提交小时]
                 FROM [QXT].[dbo].[{}]
                 WHERE [课程顾问-所属地区] = '{}'
-                      and CAST([提交时间] as date) between '{}' and '{}' '''.format(table_name, self.dq, self.start_date,
+                      and CAST([提交时间] as date) between '{}' and '{}' '''.format(self.table_name, self.dq,
+                                                                                self.start_date,
                                                                                 self.final_date)
-        return self.operate_DB(sql)
+        df = self.operate_DB(sql)
+        df['运营部'] = df['运营部'].map(self.dict_substituet)
+        return df
 
     def get_tg_groups_groupby_date(self):
 
@@ -169,6 +188,19 @@ class MySqlServer(Odbc):
         cond = df['小组'].str.endswith('组')
         df = df[cond]
         df = fun_groupby(df, cols, {cols[-1]: 'count'}, {cols[-1]: '创量'})
+        return df
+
+    def get_tg_groups_groupby_date_hours(self, start_hour, end_hour):
+        '''
+        :return:'地区', '学院', '运营部', '小组', '日期','提交小时', '业绩'
+        '''
+        cols = ['地区', '学院', '运营部', '小组', '提交日期', '提交小时']
+        df = self.get_tg_data()[cols]
+        cond = df['小组'].str.endswith('组')
+        cond1 = (end_hour >= df['提交小时'])
+        cond2 = (df['提交小时'] >= start_hour)
+        df = df[cond & cond1 & cond2]
+        df = fun_groupby(df, cols, {cols[-1]: 'count'}, {cols[-1]: '业绩'})
         return df
 
     def get_tg_groups_groupby(self):
@@ -258,7 +290,9 @@ class MySqlServer(Odbc):
                 group by [量类型],[所属学院],[所属部门],[所属战队],[所属分组]
                 having sum(cast([数据量] as int)) <> 0  and sum(cast([进群量] as int)) <> 0
                 and sum(cast([注册量] as int)) <> 0'''.format(self.dq)
-        return self.operate_DB(sql)
+        df = self.operate_DB(sql)
+        df['运营部'] = df['运营部'].map(self.dict_substituet)
+        return df
 
     def get_target(self):
         '''
@@ -272,7 +306,9 @@ class MySqlServer(Odbc):
                   ,[月目标]
               FROM [QXT].[dbo].[target]
               WHERE [地区] = '{}' '''.format(self.dq)
-        return self.operate_DB(sql)
+        df = self.operate_DB(sql)
+        df['运营部'] = df['运营部'].map(self.dict_substituet)
+        return df
 
     def get_holiday(self):
         sql = '''select dt [日期],{} 
@@ -286,10 +322,10 @@ class MySqlServer(Odbc):
         result = result[self.dq].sum()
         return result
 
-    def get_people_num(self, dq=None, start_date=None, final_date=None):
-        dq, start_date, final_date = [v if v else [self.dq, self.start_date, self.final_date][ind] for ind, v in
-                                      enumerate([dq, start_date, final_date])]
-
+    def get_people_num(self):
+        '''
+        :return: 地区 学院 运营部 小组 日期 人数
+        '''
         sql = f'''SELECT [地区]
                   ,[学院]
                   ,[战队] [运营部]
@@ -297,25 +333,24 @@ class MySqlServer(Odbc):
                   ,[日期]
                   ,[人数]
           FROM [QXT].[dbo].[people_num]
-          where [地区] = '{dq}' and [日期] between '{start_date}' and '{final_date}' '''
-        return self.operate_DB(sql)
+          where [地区] = '{self.dq}' and [日期] between '{self.start_date}' and '{self.final_date}' '''
+        df = self.operate_DB(sql)
+        df['运营部'] = df['运营部'].map(self.dict_substituet)
+        return df
 
-    def get_inf_peoplelist(self, final_date=None):
+    def get_inf_peoplelist(self):
         '''
         所有员工
         :return: '地区', '学院', '运营部', '小组', '员工姓名', '工号',
                 '员工岗位', '状态', '入职时间', '离职日期','接量类型', '在职天数'
         '''
-        if not final_date:
-            final_date = self.final_date
-
         cols = ['地区', '学院', '运营部', '小组', '员工姓名', '工号', '员工岗位', '状态', '入职时间', '离职日期', '接量类型']
         Peoplelist_df = self.get_Peoplelist()[cols]
         Peoplelist_df[cols[-3]] = pd.to_datetime(Peoplelist_df[cols[-3]])
         Peoplelist_df[cols[-2]] = pd.to_datetime(Peoplelist_df[cols[-2]])
         col_name = '在职天数'
         # 在职天数
-        final_date_date = MyDate(final_date).date_date
+        final_date_date = MyDate(self.final_date).date_date
         _fun = lambda x: (x[cols[-2]] - x[cols[-3]]) if x[cols[-4]] == '离职' else (
             (final_date_date - x[cols[-3]]) if x[cols[-4]] == '在职' else np.nan)
         Peoplelist_df[col_name] = Peoplelist_df.apply(_fun, axis=1)
@@ -490,18 +525,6 @@ class ReportDataAsDf():
 
         # 最早产生量的时间
         self.first_date = '2019/6/1'
-
-        self.dict_substituet = {
-            '1战队': '运营一部',
-            '2战队': '运营二部',
-            '3战队': '运营三部',
-            '4战队': '运营四部',
-            '5战队': '运营五部',
-            '6战队': '运营六部',
-            '7战队': '运营七部',
-            '8战队': '运营八部',
-        }
-
         # 组员 组长合格线
         self.standard_line = [125, 180]
         self.day_standard = [750, 1000]
@@ -555,12 +578,14 @@ class ReportDataAsDf():
         final_data = data.groupby(cols)
         final_data = final_data.sum()
         final_data.reset_index(inplace=True)
-        final_data[other_cols[-1]] = final_data[other_cols[-2]].divide(final_data[other_cols[0]],fill_value=0).replace([np.nan,np.inf],0)  # 进群率
-        final_data[other_cols[2]] = final_data[other_cols[1]].divide(final_data[other_cols[0]],fill_value=0).replace([np.nan,np.inf],0)  # 注册率
+        final_data[other_cols[-1]] = final_data[other_cols[-2]].divide(final_data[other_cols[0]], fill_value=0).replace(
+            [np.nan, np.inf], 0)  # 进群率
+        final_data[other_cols[2]] = final_data[other_cols[1]].divide(final_data[other_cols[0]], fill_value=0).replace(
+            [np.nan, np.inf], 0)  # 注册率
 
         cls_format = FormatSeriesOfDf(final_data)
-        final_data = cls_format.format_dot(cols_name=(other_cols[0],other_cols[1],other_cols[-2]))
-        final_data = cls_format.format_percentage(cols_name=(other_cols[2],other_cols[-1]))
+        final_data = cls_format.format_dot(cols_name=(other_cols[0], other_cols[1], other_cols[-2]))
+        final_data = cls_format.format_percentage(cols_name=(other_cols[2], other_cols[-1]))
 
         # final_data[other_cols[0]] = final_data[other_cols[0]].map(lambda x: '%.0f' % x)  # 业绩
         # final_data[other_cols[1]] = final_data[other_cols[1]].map(lambda x: '%.0f' % x)
@@ -578,7 +603,6 @@ class ReportDataAsDf():
 
         # 替换地区 部门 推广一部-'' 1战队-推广一部
         data['地区'].replace(r'推广\w部', '', regex=True, inplace=True)
-        data['运营部'].replace(self.dict_substituet, inplace=True)
         cols = list(data.columns)  # 量类型 地区  学院  运营部 小组 业绩 进群量 注册量
         deparment_list = cols[:5]
         group_data, team_data, colege_data, region_data = [
@@ -680,8 +704,6 @@ class ReportDataAsDf():
             new_df = pd.concat([new_df, avg_row])
             for colname in list(new_df.columns)[(len_cols + 1):]:
                 new_df[colname] = new_df[colname].map(lambda x: '%.0f' % x if not isinstance(x, str) else '')
-            if '运营部' in list(new_df.columns):
-                new_df['运营部'] = new_df['运营部'].map(self.dict_substituet)
             result.append(new_df)
         return result
 
@@ -699,7 +721,6 @@ class ReportDataAsDf():
         data_1 = self.vs_last_month_1(self.dq, start_date_1, final_date_1, inf_df=inf_team, cols=cols)
 
         result = pd.merge(data_1, data, how='left', on=cols)
-        result['运营部'] = result['运营部'].map(self.dict_substituet)
         new_list_index = [0, 1, 2, 5, 9, 6, 10, 3, 4, 7, 8]
         result = reindex_cols(result, new_list_index)
         return result, self.start_date
@@ -773,9 +794,6 @@ class ReportDataAsDf():
 
         result = FormatSeriesOfDf(df=result).format_percentage(n=0, cols_name=[col_complete_rate, col_name])
 
-        # 运营部
-        result['运营部'] = result['运营部'].map(self.dict_substituet)
-
         # 改变列顺序
         new_list_index = [0, 1, 2, 5, 8, 3, 4, 6, 7]
         result = reindex_cols(result, new_list_index)
@@ -806,7 +824,6 @@ class ReportDataAsDf():
             np.nan, 0)
 
         result = FormatSeriesOfDf(df=result).format_percentage(n=0, cols_name=col_names1[1])
-        result['运营部'] = result['运营部'].map(self.dict_substituet)
 
         # 改变列顺序
         new_list_index = [0, 1, 2, 3, 6, 7, 8, 4, 5]
@@ -840,8 +857,6 @@ class ReportDataAsDf():
         cls_format = FormatSeriesOfDf(df=data)
         data = cls_format.format_dot(cols_name=[col_names0[4], col_names0[6]])
         data = cls_format.format_percentage(cols_name=col_names0[5])
-
-        data['运营部'] = data['运营部'].map(self.dict_substituet)
         new_list_index = [0, 1, 2, 4, 3, 5, 7, 9, 8, 6]
         result = reindex_cols(data, new_list_index)
         return result, self.start_date
@@ -884,9 +899,8 @@ class ReportDataAsDf():
             cls_format = FormatSeriesOfDf(df=data)
             data = cls_format.format_dot(cols_name=[col_names0[4], col_names0[6]])
             data = cls_format.format_percentage(cols_name=col_names0[5])
-            data.sort_values(by=col_names0[2],ascending=False,inplace=True)
+            data.sort_values(by=col_names0[2], ascending=False, inplace=True)
 
-            data['运营部'] = data['运营部'].map(self.dict_substituet)
             new_list_index = index_all[i]
             result = reindex_cols(data, new_list_index)
             result_all.append(result)
@@ -939,7 +953,6 @@ class ReportDataAsDf():
         cols.pop(-1)
         cols.append(col_name)  # '地区', '学院', '运营部', '小组', '列名'
         result_group = fun_groupby(result_group, cols, {col_name2: 'sum', col_name3: 'sum'})
-        result_group[cols[2]] = result_group[cols[2]].map(self.dict_substituet)
 
         # 运营部
         result_team = result_group.copy()
@@ -1009,8 +1022,7 @@ class ReportDataAsDf():
             # 获取均线
             data['业绩均线'] = round(avg_teams)
             data = data.fillna(0)
-            data['运营部'] = data['运营部'].map(self.dict_substituet)
-            data.sort_values(by=col_name,ascending=False,inplace=True)
+            data.sort_values(by=col_name, ascending=False, inplace=True)
             result.append(data)
         result.append(self.start_date)
         return result
@@ -1088,7 +1100,6 @@ class ReportDataAsDf():
                         result.iloc[i, 16] = 1
 
         result_group = fun_groupby(result, columns[:4], {columns[_]: 'sum' for _ in range(4, 27)})
-        result_group['运营部'] = result_group['运营部'].map(self.dict_substituet)
         cond2 = (result_group[columns[4]] != 0)
         result_group = result_group[cond2]
 
@@ -1140,22 +1151,22 @@ class ReportDataAsDf():
         data.rename(columns={col_name3: col_name}, inplace=True)
         # 合并
         result = pd.merge(left=inf_all, right=data, how='left', on=cols[:4])
-        result[cols[2]] = result[cols[2]].map(self.dict_substituet)
         # 填充总计-
         result = fill_na(result, 3, [2, 1, 0])
-        #添加辅助列 排序
+        # 添加辅助列 排序
         col_name2 = 'rank'
-        result[col_name2]= result[cols[3]].map(lambda x:1 if x.endswith('组') else 2)
+        result[col_name2] = result[cols[3]].map(lambda x: 1 if x.endswith('组') else 2)
         # 排序
-        result.sort_values(by=[col_name], ascending=False,inplace=True)
-        result.sort_values(by=cols[:3]+[col_name2], inplace=True)
+        result.sort_values(by=[col_name], ascending=False, inplace=True)
+        result.sort_values(by=cols[:3] + [col_name2], inplace=True)
         result[cols[:3]] = result[cols[:3]].fillna('-')
-        result.drop(col_name2,axis=1,inplace=True)
+        result.drop(col_name2, axis=1, inplace=True)
         # 距目标差值
         col_name1 = '距目标差值'
         result[col_name1] = result[col_name] - result[cols[-1]]
         col_name2 = '完成率'
-        result[col_name2] = format_series_percentage(result[col_name].divide(result[cols[-1]]).replace([np.nan,np.inf],0))
+        result[col_name2] = format_series_percentage(
+            result[col_name].divide(result[cols[-1]]).replace([np.nan, np.inf], 0))
         # 小数点后0位
         columns = list(result.columns)
         for _ in [4, 6]:
@@ -1206,7 +1217,6 @@ class ReportDataAsDf():
         col_names1 = ['组员日均量合格线', '组长日均量合格线']
         for ind, colname in enumerate(col_names1):
             result[colname] = self.standard_line[ind]
-        result['运营部'] = result['运营部'].map(self.dict_substituet)
         result.sort_values(cols[:4], inplace=True)
         return result, self.start_date
 
@@ -1238,7 +1248,8 @@ class ReportDataAsDf():
         result[col_names[2]] = result[col_names[0]] + result[col_names[1]]
         # 排序
         result.sort_values(col_names[2], ascending=False, inplace=True)
-        result.columns = list(result.columns)[:-3] + col_names
+        result = result.reindex(columns=list(result.columns)[:-3] + col_names)
+        # result.columns = list(result.columns)[:-3] + col_names
         # 排名
         result.insert(0, '排名', list(range(1, result.shape[0] + 1)))
         return result, self.start_date
@@ -1299,7 +1310,6 @@ class ReportDataAsDf():
         # '工号', '员工姓名', '地区', '学院', '运营部', '小组', '员工岗位', '入职时间', '在职天数','月内工作天数',
         # '本月业绩','之前月份业绩','总业绩','当月日均业绩','总日均业绩','是否新人'
 
-        result['运营部'] = result['运营部'].map(self.dict_substituet)
         result.sort_values([cols[-3]], ascending=False, inplace=True)
         # 排名
         result.insert(0, '排名', list(range(1, result.shape[0] + 1)))
@@ -1368,8 +1378,6 @@ class ReportDataAsDf():
         result[col_name3] = result[cols[-1]] - result[cols[-2]]
         cols.append(col_name3)
         # '工号', '员工姓名', '地区', '学院', '运营部', '小组','入职时间','当月内工作天数', '上月内工作天数','本月业绩','上月业绩','上月日均业绩', '当月日均业绩','差值'
-
-        result['运营部'] = result['运营部'].map(self.dict_substituet)
 
         # 1-推广小组组长当月与上月日均业绩对比
         new_cols1 = cols[:6] + cols[-3:]
@@ -1463,14 +1471,16 @@ class ReportDataAsDf():
             inf_p2[col_name0] = inf_p2.apply(
                 lambda x: MySqlServer(dq=self.dq,
                                       start_date=self.start_date,
-                                      final_date=x[cols[9]]).get_sum_holidays() if x[cols[8]] < self.start_date_date else MySqlServer(
+                                      final_date=x[cols[9]]).get_sum_holidays() if x[cols[
+                    8]] < self.start_date_date else MySqlServer(
                     dq=self.dq,
                     start_date=x[cols[8]],
                     final_date=self.final_date).get_sum_holidays())
-            inf_p = pd.concat([inf_p2,inf_p1])
+            inf_p = pd.concat([inf_p2, inf_p1])
         else:
             inf_p = inf_p1
-        cols.append(col_name0)  # '地区', '学院', '运营部', '小组', '员工姓名', '工号','员工岗位', '状态', '入职时间', '离职日期','接量类型', '在职天数','月内工作天数'
+        cols.append(
+            col_name0)  # '地区', '学院', '运营部', '小组', '员工姓名', '工号','员工岗位', '状态', '入职时间', '离职日期','接量类型', '在职天数','月内工作天数'
 
         # 得到本月业绩
         col_name3 = '本月业绩'
@@ -1491,41 +1501,81 @@ class ReportDataAsDf():
         result_groupby.sort_values(by=col_name4, ascending=False, inplace=True)
         result_groupby[col_name5] = list(range(1, result_groupby.shape[0] + 1))
         result_groupby = FormatSeriesOfDf(result_groupby).format_dot(cols_name=col_name4)
-        result_groupby.drop(cols[-2:],axis=1,inplace=True)
-
+        result_groupby.drop(cols[-2:], axis=1, inplace=True)
 
         # 合并
         result = pd.merge(result, result_groupby, how='left', on=cols[:4])
-        cols.extend([col_name4,col_name5])
+        cols.extend([col_name4, col_name5])
         # '地区', '学院', '运营部', '小组', '员工姓名', '工号','员工岗位', '状态', '入职时间', '离职日期','接量类型', '在职天数','月内工作天数','本月业绩','小组日均量','小组排名'
-        #删除接量类型，状态，调整排名 列序
-        result.drop([cols[7],cols[10]],axis=1,inplace=True)
-        result.insert(0,col_name5,result.pop(col_name5))
-        result['运营部'] = result['运营部'].map(self.dict_substituet)
-        #排序
-        result.sort_values([col_name5,cols[6]],inplace=True)
-        result[cols[8]],result[cols[9]] = [np.where(result[_].notnull(),
-                              result[_].dt.strftime('%Y/%m/%d'),
-                              '') for _ in cols[8:10]]
+        # 删除接量类型，状态，调整排名 列序
+        result.drop([cols[7], cols[10]], axis=1, inplace=True)
+        result.insert(0, col_name5, result.pop(col_name5))
+        # 排序
+        result.sort_values([col_name5, cols[6]], inplace=True)
+        result[cols[8]], result[cols[9]] = [np.where(result[_].notnull(),
+                                                     result[_].dt.strftime('%Y/%m/%d'),
+                                                     '') for _ in cols[8:10]]
         return result, self.start_date
 
-    # todo 晨晚报
-    def morning_evening(self,hours):
-        if self.final_date_date ==datetime.date.today():
+    # 晨晚报2 --  小组 和 运营部 两个结果
+    def morning_evening(self, start_hour, end_hour):
+        '''
+        :param start_hour:
+        :param end_hour:
+        :return: 小组 和 运营部 两个结果
+        '''
+        if self.final_date_date == datetime.date.today():
             table_name = 'HourTg'
         else:
             table_name = 'Tg'
-        cls_sqlserver = MySqlServer(dq=self.dq,start_date=self.final_date,final_date=self.final_date)
-        data=cls_sqlserver.get_tg_data(table_name=table_name)
+        cls_sqlserver = MySqlServer(dq=self.dq, start_date=self.final_date, final_date=self.final_date,
+                                    table_name=table_name)
+        # 业绩
+        data = cls_sqlserver.get_tg_groups_groupby_date_hours(start_hour=start_hour,
+                                                              end_hour=end_hour)
+        cols_name = list(data.columns)  # '地区', '学院', '运营部', '小组', '日期','提交小时', '业绩'
+        data_g = fun_groupby(df=data, groupby_cols=cols_name[:4],
+                             cols_fun_dict={cols_name[-1]: 'sum'})  # '地区', '学院', '运营部', '小组', '业绩'
+        data_t = fun_groupby(df=data_g, groupby_cols=cols_name[:3],
+                             cols_fun_dict={cols_name[-1]: 'sum'})  # '地区', '学院', '运营部', '业绩'
+        datas = [data_g, data_t]
+        # 组织信息
+        inf_g = self.inf_group.iloc[:, :4]
+        inf_t = self.inf_team.iloc[:, :3]
+        infs = [inf_g, inf_t]
+        # 在职人数
+        p_num = cls_sqlserver.get_people_num()  # 地区 学院 运营部 小组 日期 人数
+        cols_name_pnum = list(p_num.columns)  # 地区 学院 运营部 小组 日期 人数
+        p_num_g = p_num.drop(cols_name_pnum[-2], axis=1)  # 地区 学院 运营部 小组 人数
+        p_num_t = fun_groupby(p_num_g, cols_name_pnum[:3], {cols_name_pnum[-1]: 'sum'})  # 地区 学院 运营部 人数
+        p_nums = [p_num_g, p_num_t]
 
+        reindexs = [[0,1,2,3,5,7,4,6],[0,1,2,4,5,3,6]]
 
-        inf_g = self.inf_group.iloc[:,:4]
-        inf_t =self.inf_team.iloc[:,:3]
-        infs = [inf_g,inf_t]
+        result = []
+        cols_num = [4, 3]
+        for i in range(2):
+            o_inf = infs[i]
+            o_p_num = p_nums[i]
+            o_data = datas[i]
+            o_cols_num = cols_num[i]
+            reind = reindexs[i]
 
-
+            o_result = merge_many_dfs(cols_name[:o_cols_num], [o_inf, o_p_num, o_data], how='left')
+            o_result[cols_name[-1]].fillna(0, inplace=True)
+            cols_name1 = ['人均推量', '差值']
+            o_result[cols_name1[0]] = o_result[cols_name[-1]].divide(o_result[cols_name_pnum[-1]]).replace(
+                [np.nan, np.inf], 0)
+            o_result = FormatSeriesOfDf(o_result).format_dot(cols_name=cols_name1[0])
+            o_result.sort_values(cols_name[-1], ascending=False, inplace=True)
+            next_row=o_result[cols_name[-1]].shift(1).fillna(method='bfill',limit=1)
+            o_result[cols_name1[1]] = o_result[cols_name[-1]]-next_row
+            o_result=reindex_cols(o_result,reind)
+            result.append(o_result)
+        return result
 
 if __name__ == '__main__':
-    df = ReportDataAsDf('保定', '2020/6/7').evening()
+    # df = ReportDataAsDf('保定', '2020/6/8').people_performance()
+    df = ReportDataAsDf('保定', '2020/6/8').morning_evening(0, 24)
     # df = Component('燕郊', '2020/6/2').component_df()
     print(df)
