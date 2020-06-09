@@ -6,17 +6,11 @@
 # @File    : cls_excel.py
 # @Software: PyCharm
 import sys
-from copy import deepcopy
-
 import win32com.client
 from win32com.client import constants as c  # 旨在直接使用VBA常数
 import os
 import numpy as np
-from cls_data_dataframe import DataAsDF
-from cls_date import MyDate
-from cls_sqlserver import ReportDataAsDf
 from fun_date import get_str_date
-from use_os import create_folder_date
 
 
 class Excel:
@@ -29,6 +23,8 @@ class Excel:
         self.big_size = 24
         self.medium_size = 12
         self.small_size = 10
+
+
 
     def screen_updating(self, bol=True):
         self.excel.ScreenUpdating = bol
@@ -86,6 +82,8 @@ class Excel:
             colorInt = rgb[0] + (rgb[1] * 256) + (rgb[2] * 256 * 256)
         elif isinstance(rgb, int):
             colorInt = rgb
+        else:
+            raise Exception('rgb Wrong!')
         return colorInt
 
     def autofit(self, rng, columnlist):
@@ -410,7 +408,43 @@ class Excel:
             else:
                 raise AttributeError('Not Existed {}.{}'.format(sys._getframe().f_code.co_name,k))
 
+    def chart_title(self, text):
+        _dict = {
+            'text': text,
+            'font': {
+                'name': self.font_name,
+                'size': self.big_size
+            }
+        }
+        return _dict
 
+    def chart_legend(self):
+        _dict = {
+            'font': {
+                'name': self.font_name,
+                'size': self.medium_size
+            },
+            'position': c.xlLegendPositionTop
+        }
+        return _dict
+
+    def chart_ticklabel(self):
+        _dict = {
+            'font': {
+                'name': self.font_name,
+                'size': self.medium_size
+            },
+        }
+        return _dict
+
+    def chart_datatable(self):
+        _dict = {
+            'font': {
+                'name': self.font_name,
+                'size': self.medium_size
+            },
+        }
+        return _dict
 
     def forecolor_style(self,obj, **kwargs):
         for k, v in kwargs.items():

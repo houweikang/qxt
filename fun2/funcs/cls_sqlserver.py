@@ -5,6 +5,7 @@
 # @Site    : 
 # @File    : cls_sqlserver.py
 # @Software: PyCharm
+import datetime
 from copy import deepcopy
 import numpy as np
 import pyodbc
@@ -512,16 +513,6 @@ class ReportDataAsDf():
         # 本月1号
         self.start_date_date = self.cls_final_date.get_date_Nmonthes_firstday(n=0)
         self.start_date = get_str_date(self.start_date_date)
-        # # 上月第一天 和 最后一天
-        # self.last_1m_1d_date = self.cls_final_date.get_date_Nmonthes_firstday(n=-1)
-        # self.last_1m_1d_str = get_str_date(self.last_1m_1d_date)
-        # self.last_1m_endd_date = self.cls_final_date.get_date_Nmonthes_endday(n=-1)
-        # self.last_1m_endd_str = get_str_date(self.last_1m_endd_date)
-        #
-        # # 五个月前 起始日期
-        # self.last_5m_1d_date = self.cls_final_date.get_date_Nmonthes_firstday(n=-5)  # 获取起始日期
-        # self.last_5m_1d_str = get_str_date(self.last_5m_1d_date)  # 获取起始日期
-        #
         # 本月业绩类
         self.cls_sqlserver_0 = MySqlServer(dq=self.dq, start_date=self.start_date, final_date=self.final_date)
 
@@ -534,8 +525,6 @@ class ReportDataAsDf():
         self.inf_groupleader = self.groupleader_inf(self.inf_people)  # 组长信息 与所有人员字段一致
 
         self.tg_peoples_groupby_0 = self.cls_sqlserver_0.get_tg_peoples_groupby()  # 本月员工业绩  工号 业绩
-
-        # self.tg_data = self.cls_sqlserver_0.get_tg_data()  # 本月推广业?绩 所有字段
 
         '''
         组信息
@@ -1519,6 +1508,21 @@ class ReportDataAsDf():
                               result[_].dt.strftime('%Y/%m/%d'),
                               '') for _ in cols[8:10]]
         return result, self.start_date
+
+    # todo 晨晚报
+    def morning_evening(self,hours):
+        if self.final_date_date ==datetime.date.today():
+            table_name = 'HourTg'
+        else:
+            table_name = 'Tg'
+        cls_sqlserver = MySqlServer(dq=self.dq,start_date=self.final_date,final_date=self.final_date)
+        data=cls_sqlserver.get_tg_data(table_name=table_name)
+
+
+        inf_g = self.inf_group.iloc[:,:4]
+        inf_t =self.inf_team.iloc[:,:3]
+        infs = [inf_g,inf_t]
+
 
 
 if __name__ == '__main__':

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2020/4/24 9:48:34
+# @Time    : 2020/6/8 14:00:31
 # @Author  : HouWk
 # @Site    : 
-# @File    : use_os.py
+# @File    : fun_os.py
 # @Software: PyCharm
 import os
 from datetime import datetime

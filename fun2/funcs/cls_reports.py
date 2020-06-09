@@ -10,7 +10,7 @@ from copy import deepcopy
 from win32com.client import constants as c  # 旨在直接使用VBA常数
 from cls_sqlserver import ReportDataAsDf, Component
 from fun_date import get_str_date
-from use_os import create_folder_date
+from fun_os import create_folder_date
 
 
 class Reports(Excel):
@@ -41,8 +41,8 @@ class Reports(Excel):
         self.size_chart = (0, 170, 900, 400)
         self.size_chart_datatable = (0, 170, 900, 500)
 
-        self.size_chart_sixmonth = [(800, 0, 900, 400), (800, 401, 900, 400)]
-        self.size_chart_sixmonth_group = [(800, 0, 900, 600), (800, 601, 900, 600)]
+        self.size_chart_sixmonth = [(600, 0, 900, 400), (600, 401, 900, 400)]
+        self.size_chart_sixmonth_group = [(600, 0, 900, 600), (600, 601, 900, 600)]
 
         # charttype 0-xlColumnClustered柱状图 1-折线图 2-折线跌涨柱  3-柱状堆积图
         self.chart_type = [c.xlColumnClustered, c.xlLine, c.xlLineMarkers, c.xlColumnStacked]
@@ -53,47 +53,69 @@ class Reports(Excel):
         # chart_style_num  0-233
         self.chart_style_num = [233, ]
 
-        # datalabelposition 0、1 折线  2、3 柱形图 0-数据点上方 1-数据点下方 2-上边缘上方 3-上边缘下方
+        # datalabelposition [0、1] 折线  0-数据点上方 1-数据点下方  [2、3] 柱形图 2-上边缘上方 3-上边缘下方
         self.datalabel_position = [c.xlLabelPositionAbove, c.xlLabelPositionBelow,
                                    c.xlLabelPositionOutsideEnd, c.xlLabelPositionInsideEnd]
 
-    def chart_title(self, text):
-        _dict = {
-            'text': text,
-            'font': {
-                'name': self.font_name,
-                'size': self.big_size
-            }
-        }
-        return _dict
+    def reports_morning_evening(self,hours):
+        self.screen_updating(False)  # 关闭屏幕刷新
+        wb_obj = self.excel.Workbooks.Add()  # 创建excel wb
+        for dq in self.common_dqs:
+            df, start_date, final_date = Component(dq=dq, final_date=self.final_date).component_df()  # 数据帧
+            # 表
+            sheet_name = '%s近%d月日人均分量' % (dq, 4)
+            # 区域标题
+            r_title_v = sheet_name
+            # 区域副标题
+            r_subtitles_v = self.subtitle(start_date, final_date)
+            # 区域赋值 并 设定格式
+            sht_obj, rs, cs = self.common_sheet(wb_obj=wb_obj, sht_name=sheet_name, tab_color=self.tab_colors[4],
+                                                df=df,
+                                                title_v=r_title_v, subtitles_v=r_subtitles_v)
+            # 图
+            chart_size = self.size_long_chart
+            chart_type = self.chart_type[1]
+            chart_name = sheet_name
+            chart_plotby = self.chart_plotby[0]
+            chart_style_num = self.chart_style_num[0]
+            gridline = False
+            # 标题
+            chart_title = '%s%s-近%d个月每日人均分量趋势' % ('QX', dq, 4)
+            chart_title_dict = self.chart_title(chart_title)
+            # 数据区域
+            chart_data_rng = sht_obj.Range('a3', sht_obj.Cells(rs, cs))
+            # 图例
+            legend_dict = self.chart_legend()
+            # 坐标轴
+            ticklabel_dict = self.chart_ticklabel()
+            # 数据表
+            datatable_dict = self.chart_datatable()
+            # 数据系列标签
+            series_dict = [
+                {'all': {
+                    'smooth': True,
+                    'linecolors': {
+                        'colors': self.component_RGB,
+                        'reverse': True
+                    }
+                }
+                }
+            ]
+            self.common_chart(sht_obj=sht_obj, chart_data_rng_obj=chart_data_rng, chart_name=chart_name,
+                              chart_type=chart_type, chart_style_num=chart_style_num, chart_size=chart_size,
+                              chart_plotby=chart_plotby, gridline=gridline, chart_title=chart_title_dict,
+                              legend=legend_dict,
+                              ticklabel=ticklabel_dict, datatable=datatable_dict, series=series_dict)
 
-    def chart_legend(self):
-        _dict = {
-            'font': {
-                'name': self.font_name,
-                'size': self.medium_size
-            },
-            'position': c.xlLegendPositionTop
-        }
-        return _dict
+        wb_obj.Sheets(1).Delete()
+        wb_obj.Sheets(1).Select()
+        # 保存文件
+        path = create_folder_date(self.root_path, self.final_date)  # 创建目标文件夹
+        str_date = get_str_date(self.final_date, '%Y%m%d')
+        wb_name = '%s日报_人均分量' % (str_date)
+        self.workbook_save(wookbook_obj=wb_obj, name=wb_name, path=path)
+        self.screen_updating(True)  # 开启屏幕刷新
 
-    def chart_ticklabel(self):
-        _dict = {
-            'font': {
-                'name': self.font_name,
-                'size': self.medium_size
-            },
-        }
-        return _dict
-
-    def chart_datatable(self):
-        _dict = {
-            'font': {
-                'name': self.font_name,
-                'size': self.medium_size
-            },
-        }
-        return _dict
 
     # 报表 分量
     def report_component(self):
@@ -103,7 +125,6 @@ class Reports(Excel):
             df, start_date, final_date = Component(dq=dq, final_date=self.final_date).component_df()  # 数据帧
             # 表
             sheet_name = '%s近%d月日人均分量' % (dq, 4)
-
             # 区域标题
             r_title_v = sheet_name
             # 区域副标题
@@ -140,7 +161,6 @@ class Reports(Excel):
                 }
                 }
             ]
-
             self.common_chart(sht_obj=sht_obj, chart_data_rng_obj=chart_data_rng, chart_name=chart_name,
                               chart_type=chart_type, chart_style_num=chart_style_num, chart_size=chart_size,
                               chart_plotby=chart_plotby, gridline=gridline, chart_title=chart_title_dict,
@@ -735,11 +755,11 @@ class Reports(Excel):
             data_rng = [rng_all, rng_avg]
 
             if n == 1 and i == 0 and (css == 0 or css == 1):
-                cell = sht_obj.Cells(1, cs + 1)
+                cell = sht_obj.Cells(rs+5, 1)
                 if css == 0:
-                    cell.Value = '只发日人均创量到全国群'
+                    cell.Value = '只发日人均创量图到全国群'
                 elif css == 1:
-                    cell.Value = '只发日同期创量到业务群'
+                    cell.Value = '只发同期创量图到业务群'
 
                 cell.Font.Bold = True
                 cell.Font.Size = 20
